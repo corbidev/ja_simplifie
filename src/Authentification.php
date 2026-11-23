@@ -20,17 +20,29 @@ final class Authentification
     private const MESSAGE_ERREUR_SESSION = 'Impossible d’initialiser la session sécurisée.';
     private const MESSAGE_ERREUR_DESTINATION = 'Destination de retour invalide.';
     private const MESSAGE_ERREUR_IDENTITE = 'Identité d’authentification invalide.';
+    private const MESSAGE_ERREUR_REDIRECTION = 'Impossible d’effectuer la redirection.';
 
     private const PAGE_PORTE = 'porte-des-etoiles.php';
     private const PAGE_TABLEAU_DE_BORD = 'tableau-de-bord.php';
     private const PAGE_SUPERVISION = 'supervision.php';
     private const PARAMETRE_EQUIPE = 'equipe';
     private const PARAMETRE_CLE = 'cle';
+    private const NOM_JETON_CSRF = 'jeton_csrf';
+    private const TAILLE_JETON_CSRF_OCTETS = 32;
+    private const FORMAT_JETON_CSRF = '/\A[a-f0-9]{64}\z/';
     private const CLES_PAR_IDENTIFIANT_EQUIPE = [
         'equipe1' => ['numero' => 1, 'variable_cle' => 'CLE_EQUIPE_1'],
         'equipe2' => ['numero' => 2, 'variable_cle' => 'CLE_EQUIPE_2'],
         'equipe3' => ['numero' => 3, 'variable_cle' => 'CLE_EQUIPE_3'],
         'equipe4' => ['numero' => 4, 'variable_cle' => 'CLE_EQUIPE_4'],
+    ];
+    private const DESTINATIONS_REDIRECTION_AUTORISEES = [
+        self::PAGE_SUPERVISION,
+        self::PAGE_TABLEAU_DE_BORD . '?equipe=0',
+        self::PAGE_PORTE . '?equipe=1',
+        self::PAGE_PORTE . '?equipe=2',
+        self::PAGE_PORTE . '?equipe=3',
+        self::PAGE_PORTE . '?equipe=4',
     ];
 
     /**
@@ -434,5 +446,143 @@ final class Authentification
         }
 
         $_SESSION['authentification'] = $identiteNormalisee;
+    }
+
+    /**
+     * Génère un jeton CSRF pour la session ou réutilise celui qui y est déjà valide.
+     *
+     * @return string Jeton CSRF opaque à inclure dans les formulaires POST.
+     * @throws RuntimeException Si aucune session active n'est disponible.
+     * @throws \Random\RandomException Si la source cryptographiquement sûre ne peut pas produire le jeton.
+     */
+    public static function genererJetonCsrf(): string
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            throw new RuntimeException(self::MESSAGE_ERREUR_SESSION);
+        }
+
+        $jetonExistant = $_SESSION[self::NOM_JETON_CSRF] ?? null;
+
+        if (
+            is_string($jetonExistant)
+            && preg_match(self::FORMAT_JETON_CSRF, $jetonExistant) === 1
+        ) {
+            return $jetonExistant;
+        }
+
+        $jeton = bin2hex(random_bytes(self::TAILLE_JETON_CSRF_OCTETS));
+        $_SESSION[self::NOM_JETON_CSRF] = $jeton;
+
+        return $jeton;
+    }
+
+    /**
+     * Compare en temps constant le jeton soumis avec celui de la session active.
+     *
+     * @param mixed $jetonSoumis Valeur reçue depuis le champ POST CSRF.
+     * @return bool Vrai uniquement si le jeton est correctement formé et correspond à la session.
+     */
+    public static function verifierJetonCsrf(mixed $jetonSoumis): bool
+    {
+        if (
+            session_status() !== PHP_SESSION_ACTIVE
+            || !is_string($jetonSoumis)
+            || preg_match(self::FORMAT_JETON_CSRF, $jetonSoumis) !== 1
+        ) {
+            return false;
+        }
+
+        $jetonSession = $_SESSION[self::NOM_JETON_CSRF] ?? null;
+
+        if (
+            !is_string($jetonSession)
+            || preg_match(self::FORMAT_JETON_CSRF, $jetonSession) !== 1
+        ) {
+            return false;
+        }
+
+        return hash_equals($jetonSession, $jetonSoumis);
+    }
+
+    /**
+     * Construit une URL relative interne à partir d'une destination et d'une identité validées.
+     *
+     * @param array{page: string, parametres: array{equipe?: int}}|null $destination Destination normalisée ou null en accès direct.
+     * @param array{role: string, equipe: int|null} $identite Identité créée côté serveur.
+     * @return string URL relative de la page autorisée, sans clé.
+     * @throws InvalidArgumentException Si aucune destination compatible avec l'identité ne peut être construite.
+     */
+    public static function construireDestinationFinale(?array $destination, array $identite): string
+    {
+        if ($destination === null) {
+            $role = $identite['role'] ?? null;
+            $equipe = $identite['equipe'] ?? null;
+
+            $destination = match ($role) {
+                'equipe' => is_int($equipe) && in_array($equipe, [1, 2, 3, 4], true)
+                    ? [
+                        'page' => self::PAGE_PORTE,
+                        'parametres' => [self::PARAMETRE_EQUIPE => $equipe],
+                    ]
+                    : null,
+                'tableau_de_bord' => $equipe === 0
+                    ? [
+                        'page' => self::PAGE_TABLEAU_DE_BORD,
+                        'parametres' => [self::PARAMETRE_EQUIPE => 0],
+                    ]
+                    : null,
+                'administrateur' => array_key_exists('equipe', $identite) && $equipe === null
+                    ? [
+                        'page' => self::PAGE_SUPERVISION,
+                        'parametres' => [],
+                    ]
+                    : null,
+                default => null,
+            };
+        }
+
+        if (!self::destinationAutoriseePourIdentite($destination, $identite)) {
+            throw new InvalidArgumentException(self::MESSAGE_ERREUR_DESTINATION);
+        }
+
+        $page = $destination['page'];
+        $parametresFinaux = match ($page) {
+            self::PAGE_PORTE => [
+                self::PARAMETRE_EQUIPE => $identite['equipe'],
+            ],
+            self::PAGE_TABLEAU_DE_BORD => [
+                self::PARAMETRE_EQUIPE => 0,
+            ],
+            self::PAGE_SUPERVISION => [],
+            default => throw new InvalidArgumentException(self::MESSAGE_ERREUR_DESTINATION),
+        };
+
+        if ($parametresFinaux === []) {
+            return $page;
+        }
+
+        return $page . '?' . http_build_query($parametresFinaux, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /**
+     * Redirige vers une destination relative interne autorisée et termine la requête.
+     *
+     * @param string $destination Destination finale produite côté serveur.
+     * @return never Cette méthode ne retourne jamais normalement.
+     * @throws InvalidArgumentException Si la destination n'appartient pas à la liste autorisée.
+     * @throws RuntimeException Si les en-têtes HTTP ont déjà été envoyés.
+     */
+    public static function redirigerVers(string $destination): never
+    {
+        if (!in_array($destination, self::DESTINATIONS_REDIRECTION_AUTORISEES, true)) {
+            throw new InvalidArgumentException(self::MESSAGE_ERREUR_REDIRECTION);
+        }
+
+        if (headers_sent()) {
+            throw new RuntimeException(self::MESSAGE_ERREUR_REDIRECTION);
+        }
+
+        header('Location: ' . $destination, true, 303);
+        exit;
     }
 }

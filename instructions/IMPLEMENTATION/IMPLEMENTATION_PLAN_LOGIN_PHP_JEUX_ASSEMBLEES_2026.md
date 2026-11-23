@@ -88,6 +88,11 @@ Arborescence cible utilisée pour cette fonctionnalité :
 ```text
 projet/
 ├── public/
+│   ├── assets/
+│   │   ├── css/
+│   │   │   └── login.css
+│   │   └── js/
+│   │       └── login.js
 │   └── login.php
 ├── src/
 │   ├── Authentification.php
@@ -96,8 +101,10 @@ projet/
 ```
 
 Fichiers :
-- `public/login.php` : contrôleur de la requête et rendu de la page de connexion.
-- `src/Authentification.php` : fonctions de chargement de configuration, validation de l'accès, gestion de session et redirection.
+- `public/login.php` : contrôleur de la requête GET/POST et rendu de la page de connexion.
+- `public/assets/css/login.css` : présentation responsive et styles des thèmes sombre et clair.
+- `public/assets/js/login.js` : bascule du thème et mémorisation de la préférence.
+- `src/Authentification.php` : chargement de configuration, validation de l'accès, gestion de session et redirection.
 - `src/ConstantesAuthentification.php` : textes et messages affichés par la page.
 
 Le découpage dans `src/` respecte l'arborescence du cadrage et évite de mélanger le traitement HTTP, les règles d'authentification et les textes applicatifs. Aucun framework ni paquet tiers n'est introduit.
@@ -446,11 +453,11 @@ Avant toute écriture de code, relever la version PHP effectivement activée che
 
 #### 3.9 Générer et vérifier le jeton CSRF
 
-- [ ] **Méthode prévue :** `public static function genererJetonCsrf()`
+- [X] **Méthode prévue :** `public static function genererJetonCsrf()`
 - **Rôle :** créer un jeton aléatoire lié à la session pour protéger les soumissions POST.
 - **Entrée :** session active.
 - **Sortie :** jeton opaque stocké côté session et retourné pour l'inclusion dans le formulaire.
-- **Méthode prévue :** `public static function verifierJetonCsrf($jetonSoumis)`
+- [X] **Méthode prévue :** `public static function verifierJetonCsrf($jetonSoumis)`
 - **Rôle :** vérifier le jeton reçu avec le formulaire.
 - **Entrée :** jeton POST éventuel.
 - **Sortie :** booléen.
@@ -460,11 +467,11 @@ Avant toute écriture de code, relever la version PHP effectivement activée che
   3. comparer de manière sûre le jeton soumis et celui de session ;
   4. refuser le traitement POST si le jeton est absent ou invalide.
 - **Validation préalable :** version PHP confirmée et fonctions natives disponibles identifiées.
-- **Bilan post-réalisation :** chaque formulaire de connexion est protégé contre les soumissions forgées.
+- **Bilan post-réalisation :** les méthodes génèrent ou réutilisent un jeton de 32 octets cryptographiquement sûr, stocké sous `$_SESSION['jeton_csrf']`, puis comparent le jeton soumis avec `hash_equals()`. Le formulaire utilisera `jeton_csrf` comme nom de champ à l'étape de création du contrôleur ; aucune URL ne contient le jeton. L'intégration des méthodes aux formulaires reste à réaliser à l'étape 4. La syntaxe PHP a été vérifiée ; aucun test n'a été exécuté conformément à la stratégie du projet.
 
 #### 3.10 Construire la destination finale
 
-- [ ] **Méthode prévue :** `public static function construireDestinationFinale($destination, $identite)`
+- [X] **Méthode prévue :** `public static function construireDestinationFinale($destination, $identite)`
 - **Rôle :** produire uniquement une URL relative interne après contrôle de compatibilité.
 - **Entrées :** destination normalisée et identité de session validée.
 - **Sortie :** chemin relatif de la page autorisée avec paramètres GET utiles, sans `cle`.
@@ -477,11 +484,11 @@ Avant toute écriture de code, relever la version PHP effectivement activée che
   6. ne pas ajouter de paramètre d'équipe à la supervision ;
   7. ne jamais retourner une URL absolue.
 - **Validation préalable :** contrat des paramètres GET et compatibilité destination/identité validés.
-- **Bilan post-réalisation :** la destination finale est interne et ne contient aucun secret.
+- **Bilan post-réalisation :** la méthode vérifie la compatibilité avant de construire la destination, y compris pour les destinations de secours selon l'identité. Elle génère uniquement les pages autorisées, impose l'équipe issue de l'identité ou `equipe=0` et utilise un encodage RFC 3986 ; `cle` et tout paramètre non défini sont exclus. La syntaxe PHP a été vérifiée ; aucun test n'a été exécuté conformément à la stratégie du projet.
 
 #### 3.11 Rediriger vers une destination interne
 
-- [ ] **Méthode prévue :** `public static function redirigerVers($destination)`
+- [X] **Méthode prévue :** `public static function redirigerVers($destination)`
 - **Rôle :** envoyer l'en-tête de redirection HTTP puis arrêter l'exécution.
 - **Entrée :** destination relative produite par `construireDestinationFinale()` ou destination de secours définie par le type d'identité.
 - **Sortie :** aucune ; la méthode termine la requête après l'envoi de la redirection.
@@ -491,31 +498,30 @@ Avant toute écriture de code, relever la version PHP effectivement activée che
   3. arrêter immédiatement le script après l'en-tête ;
   4. ne jamais réinjecter une chaîne fournie librement par l'utilisateur dans l'en-tête `Location`.
 - **Validation préalable :** contrat des destinations finales validé.
-- **Bilan post-réalisation :** toutes les redirections sont internes, cohérentes et sans clé dans l'URL.
+- **Bilan post-réalisation :** la méthode accepte uniquement les six URL relatives canoniques produites par le constructeur, refuse les en-têtes déjà envoyés, envoie une redirection `303 See Other` et termine immédiatement le script. Toutes les redirections restent internes et sans clé. La syntaxe PHP a été vérifiée ; aucun test n'a été exécuté conformément à la stratégie du projet.
 
 ### Étape 4 — Créer le contrôleur et la page `login.php`
 
 #### 4.1 Créer le point d'entrée `public/login.php`
 
-- [ ] **Objectif :** orchestrer le traitement HTTP et afficher les formulaires de connexion.
+- [X] **Objectif :** créer le point d'entrée et initialiser son contexte serveur sans anticiper le traitement des requêtes ni le rendu.
 - **Fichier créé :** `public/login.php`.
-- **Responsabilités :**
+- **Responsabilités de cette sous-étape (bootstrap uniquement) :**
   1. charger les dépendances depuis `src/` avec des chemins déterminés côté serveur ;
   2. initialiser la session avant toute sortie ;
-  3. charger la configuration privée ;
-  4. récupérer et normaliser la destination d'origine ;
-  5. traiter une clé présente dans l'URL d'origine, si elle existe ;
-  6. traiter les formulaires POST ;
-  7. vérifier le jeton CSRF avant tout traitement POST ;
-  8. créer la session uniquement après authentification réussie et compatibilité de destination ;
-  9. rediriger vers la destination finale sans `cle` ;
-  10. afficher les formulaires en cas d'accès direct, de clé absente ou d'échec.
+  3. charger la configuration privée et conserver un message générique si elle est indisponible ;
+  4. récupérer et normaliser la destination d'origine et conserver un message générique si elle est invalide.
+- **Responsabilités réservées aux sous-étapes suivantes :**
+  - traitement GET avec clé : 4.2 ;
+  - traitement GET sans clé et session existante : 4.3 ;
+  - traitement POST, vérification CSRF, création de l'identité et redirection : 4.4 ;
+  - affichage des formulaires et des messages : 4.5.
 - **Validation préalable :** dépendances, signatures et contrats des méthodes de la section 3 validés.
-- **Bilan post-réalisation :** le fichier reste un contrôleur lisible et ne réimplémente pas les règles métier déjà centralisées dans `Authentification`.
+- **Bilan post-réalisation :** le bootstrap charge les dépendances par chemins serveur, initialise la session, charge la configuration et normalise la destination. Il conserve les messages génériques d'indisponibilité ou de destination invalide pour le rendu ultérieur. Il ne produit pas encore de HTML et ne traite ni authentification, ni POST, ni redirection, conformément au périmètre validé ; ces comportements restent réservés aux sous-étapes indiquées.
 
 #### 4.2 Traiter une requête GET avec une destination et une clé
 
-- [ ] **Objectif :** authentifier automatiquement une demande dont l'URL d'origine contient une clé.
+- [X] **Objectif :** authentifier automatiquement une demande dont l'URL d'origine contient une clé.
 - **Actions :**
   1. lire la destination transmise ;
   2. la normaliser ;
@@ -527,23 +533,23 @@ Avant toute écriture de code, relever la version PHP effectivement activée che
   8. rediriger.
 - **Échec :** rester sur la page de connexion ou y rediriger ; afficher un message générique et conserver la destination interne validée pour permettre une nouvelle tentative.
 - **Validation préalable :** format exact de transmission de l'URL d'origine confirmé.
-- **Bilan post-réalisation :** une clé valide et cohérente ouvre la bonne ressource ; une clé incohérente ne crée aucune session.
+- **Bilan post-réalisation :** une clé présente est extraite de la destination d'origine puis contrôlée selon la page, l'équipe et la compatibilité d'identité. Le succès crée l'identité en session, construit la destination sans `cle` et redirige ; l'échec conserve la destination normalisée et un message générique sans créer de session. L'absence de clé reste traitée à l'étape 4.3, et le rendu du message à l'étape 4.5. La syntaxe PHP a été vérifiée ; aucun test n'a été exécuté conformément à la stratégie du projet.
 
 #### 4.3 Traiter une requête GET sans clé exploitable
 
-- [ ] **Objectif :** afficher les possibilités de connexion tout en conservant la destination d'origine.
+- [X] **Objectif :** traiter une requête GET sans clé en contrôlant la session et en conservant la destination d'origine.
 - **Actions :**
   1. vérifier si une session existante est déjà présente ;
   2. si la session permet l'accès à la destination, rediriger vers cette destination après contrôle ;
-  3. sinon afficher les trois zones de connexion ;
+  3. sinon rester sur la page de connexion ; l'affichage des trois zones de connexion est réalisé à l'étape 4.5 ;
   4. conserver uniquement la destination interne validée ;
   5. ne pas exposer la clé reçue ou absente dans le HTML.
 - **Validation préalable :** règles de compatibilité entre session existante et destination confirmées.
-- **Bilan post-réalisation :** l'absence de clé n'efface pas le parcours demandé et n'accorde aucun accès.
+- **Bilan post-réalisation :** lorsqu'une destination valide existe sans paramètre `cle`, une session dont l'identité est compatible est redirigée vers cette destination nettoyée. Une session absente ou incompatible et un accès direct restent sur le contrôleur, sans conférer d'accès ; la destination validée demeure disponible pour les étapes suivantes. Aucun secret n'est affiché. La syntaxe PHP a été vérifiée ; aucun test n'a été exécuté conformément à la stratégie du projet.
 
 #### 4.4 Traiter les formulaires POST
 
-- [ ] **Objectif :** traiter séparément les trois types d'accès.
+- [X] **Objectif :** traiter séparément les trois types d'accès.
 - **Actions :**
   1. vérifier la méthode HTTP ;
   2. vérifier le jeton CSRF ;
@@ -562,11 +568,12 @@ Avant toute écriture de code, relever la version PHP effectivement activée che
   - une connexion administrateur ouvre la supervision ;
   - une identité valide mais incompatible avec la destination d'origine est refusée pour cette destination.
 - **Validation préalable :** noms de champs POST et correspondance des formulaires confirmés.
-- **Bilan post-réalisation :** chaque formulaire ne peut créer que le rôle qui lui correspond.
+- **Bilan post-réalisation :** le contrôleur vérifie d'abord le jeton CSRF, utilise uniquement les champs POST validés et refuse une destination POST invalide ou incompatible sans créer de session. Une destination absente utilise la route de secours correspondant à l'identité. Le succès crée l'identité, construit la route finale puis redirige ; l'échec définit un message générique sans réafficher de secret. Le rendu des messages reste réalisé à l'étape 4.5. La syntaxe PHP a été vérifiée ; aucun test n'a été exécuté conformément à la stratégie du projet.
 
-#### 4.5 Afficher les formulaires et les messages
+#### 4.5 Afficher les formulaires, les messages et le choix de thème
 
-- [ ] **Objectif :** afficher une interface de connexion claire sans divulguer d'information sensible.
+- [X] **Objectif :** afficher une interface de connexion moderne et accessible sans divulguer d'information sensible, avec thème sombre par défaut et bascule clair/sombre mémorisée.
+- **Fichiers concernés :** `public/login.php`, `src/ConstantesAuthentification.php`, `public/assets/css/login.css` et `public/assets/js/login.js`.
 - **Actions :**
   1. afficher les trois zones définies en section 2.3 ;
   2. inclure un jeton CSRF dans chaque formulaire POST ;
@@ -575,14 +582,17 @@ Avant toute écriture de code, relever la version PHP effectivement activée che
   5. afficher les messages comme du texte brut ;
   6. ne jamais réafficher une clé ou un mot de passe après échec ;
   7. ne pas révéler si l'identifiant administrateur ou le secret est celui qui est incorrect.
+  8. utiliser une mise en page responsive, lisible et accessible au clavier ;
+  9. appliquer le thème sombre initialement et permettre de basculer au thème clair, en mémorisant le choix dans `localStorage` ;
+  10. ne pas afficher les formulaires si la destination est invalide, si la configuration est indisponible ou si un jeton CSRF ne peut pas être généré.
 - **Validation préalable :** textes et libellés validés à l'étape 2.
-- **Bilan post-réalisation :** le HTML n'expose aucun secret et tous les messages applicatifs sont externalisés.
+- **Bilan post-réalisation :** les trois formulaires utilisent les constantes validées et un jeton CSRF commun à la session. La destination cachée, lorsqu'elle existe, est reconstruite depuis sa représentation normalisée et ne contient pas `cle`. Les messages et valeurs dynamiques sont échappés ; aucun secret n'est prérempli ou réaffiché. L'interface est responsive, utilisable au clavier et propose une bascule de thème avec sombre par défaut et préférence mémorisée. Les formulaires ne sont rendus qu'avec une configuration, une destination et un jeton utilisables. Les syntaxes PHP et JavaScript ont été vérifiées ; aucun test ou contrôle visuel n'a été exécuté conformément à la stratégie du projet.
 
 ### Étape 5 — Sécuriser le traitement de bout en bout
 
 #### 5.1 Vérifier la protection des secrets et des erreurs
 
-- [ ] **Objectif :** respecter les exigences de sécurité du cadrage.
+- [X] **Objectif :** respecter les exigences de sécurité du cadrage et empêcher l'exposition HTTP des détails d'exception connus.
 - **Fichiers concernés :** `public/login.php`, `src/Authentification.php`.
 - **Actions :**
   1. ne jamais écrire une clé ou un mot de passe dans les journaux ;
@@ -592,11 +602,11 @@ Avant toute écriture de code, relever la version PHP effectivement activée che
   5. afficher un message applicatif générique si la configuration est indisponible ;
   6. conserver les détails techniques hors de la réponse HTTP.
 - **Validation préalable :** politique de gestion des erreurs et absence de journalisation des secrets confirmées.
-- **Bilan post-réalisation :** les erreurs visibles ne révèlent ni secret, ni chemin serveur, ni détail interne.
+- **Bilan post-réalisation :** les exceptions prévues lors du démarrage de session, du chargement de `.env`, du traitement d'authentification/redirection et de la génération CSRF sont interceptées à leurs points d'appel ; leurs détails sont dirigés vers le journal PHP serveur et seul un message applicatif générique peut être rendu. Les erreurs d'entrée utilisateur conservent leurs messages génériques et leurs valeurs ne sont pas journalisées. Le contenu de `.env`, les clés, les mots de passe et les détails d'exception ne sont pas insérés dans la réponse HTML. La syntaxe des trois fichiers PHP a été vérifiée ; aucun test n'a été exécuté conformément à la stratégie du projet.
 
 #### 5.2 Verrouiller la destination et les paramètres
 
-- [ ] **Objectif :** empêcher les redirections externes et les changements de rôle par GET.
+- [X] **Objectif :** empêcher les redirections externes et les changements de rôle par GET.
 - **Fichiers concernés :** `src/Authentification.php`, `public/login.php`.
 - **Actions :**
   1. limiter les destinations aux trois pages fonctionnelles ;
@@ -606,27 +616,27 @@ Avant toute écriture de code, relever la version PHP effectivement activée che
   5. imposer l'équipe depuis l'identité validée ;
   6. refuser une destination altérée ou externe.
 - **Validation préalable :** liste des destinations et contrats d'identité validés.
-- **Bilan post-réalisation :** les paramètres navigateur ne permettent ni redirection externe ni élévation/changement de rôle.
+- **Bilan post-réalisation :** la vérification confirme que `normaliserDestination()` n'accepte que les trois routes internes et les paramètres strictement prévus, élimine `cle` de sa représentation, `destinationAutoriseePourIdentite()` compare la destination à l'identité issue du serveur, et `construireDestinationFinale()` reconstruit uniquement une URL relative canonique depuis cette identité. `redirigerVers()` applique une liste blanche finale ; aucune donnée `role` ou `equipe` de GET/POST ne construit une identité ou une redirection. Aucun changement de code n'était nécessaire pour cette sous-étape. Aucun test n'a été exécuté conformément à la stratégie du projet.
 
 #### 5.3 Verrouiller les sessions et les formulaires
 
-- [ ] **Objectif :** appliquer les protections de session et CSRF prévues.
+- [X] **Objectif :** appliquer les protections de session et CSRF prévues.
 - **Fichiers concernés :** `src/Authentification.php`, `public/login.php`.
 - **Actions :**
   1. configurer les attributs du cookie ;
   2. renouveler l'identifiant de session lors de l'authentification ;
-  3. ne stocker que l'identité ;
+  3. ne stocker aucune clé ni aucun mot de passe ; conserver l'identité d'authentification sous sa clé dédiée et le jeton CSRF séparément ;
   4. vérifier le jeton CSRF avant tout POST ;
   5. ne pas activer de session persistante.
 - **Validation préalable :** version PHP et contexte HTTPS confirmés.
-- **Bilan post-réalisation :** les règles de session et de protection CSRF sont appliquées sans introduire de mécanisme de connexion persistante.
+- **Bilan post-réalisation :** `initialiserSessionSecurisee()` configure `HttpOnly`, `SameSite=Lax`, `Secure` si HTTPS et une durée de vie de cookie nulle, puis démarre la session. `creerSession()` renouvelle l'identifiant avec suppression de l'ancienne session et enregistre uniquement les champs `role` et `equipe` sous `authentification`. Le jeton CSRF est stocké séparément sous `jeton_csrf`, généré avec une source cryptographiquement sûre puis vérifié avant le traitement des identifiants POST. Aucun identifiant ni mot de passe n'est stocké en session et aucune connexion persistante n'est activée. Aucun changement de code n'était nécessaire pour cette sous-étape ; aucun test n'a été exécuté conformément à la stratégie du projet.
 
 ### Étape 6 — Clôturer le périmètre de `login.php`
 
 #### 6.1 Relecture de conformité au cadrage
 
-- [ ] **Objectif :** s'assurer que le code livré reste strictement dans le périmètre de `login.php`.
-- **Fichiers concernés :** les trois fichiers créés pour cette fonctionnalité.
+- [X] **Objectif :** s'assurer que le code livré reste strictement dans le périmètre de `login.php`.
+- **Fichiers concernés :** les cinq fichiers PHP, CSS et JavaScript de cette fonctionnalité, créés ou modifiés.
 - **Points de relecture :**
   - authentification centralisée ;
   - quatre identifiants d'équipe `equipe1` à `equipe4` ;
@@ -642,17 +652,17 @@ Avant toute écriture de code, relever la version PHP effectivement activée che
   - textes applicatifs externalisés ;
   - documentation PHP en français sur chaque classe et méthode créée.
 - **Validation préalable :** relecture documentaire du périmètre et des fichiers concernés.
-- **Bilan post-réalisation :** liste précise des fichiers créés et de leurs responsabilités ; aucune autre page PHP n'a été créée ou modifiée.
+- **Bilan post-réalisation :** `public/login.php` porte le traitement HTTP et le rendu ; `src/Authentification.php` centralise les règles d'authentification, de session, de CSRF et de redirection ; `src/ConstantesAuthentification.php` centralise les textes ; `public/assets/css/login.css` porte la présentation et les thèmes ; `public/assets/js/login.js` gère la bascule et la préférence de thème. Aucune autre page PHP n'a été créée ou modifiée.
 
 #### 6.2 Mettre à jour le plan
 
-- [ ] **Objectif :** refléter fidèlement l'avancement réel.
+- [X] **Objectif :** refléter fidèlement l'avancement réel.
 - **Actions :**
   1. cocher uniquement les sous-étapes effectivement réalisées et validées ;
   2. conserver les sous-étapes non commencées décochées ;
   3. noter les décisions validées et les éventuelles questions encore ouvertes ;
   4. ne pas annoncer une étape comme terminée si son code n'a pas été écrit et relu.
-- **Bilan post-réalisation :** le plan reste la source de vérité technique de cette fonctionnalité.
+- **Bilan post-réalisation :** à la clôture du périmètre initial, toutes les sous-étapes de réalisation de `login.php` ont été réalisées et relues. Les décisions validées et la clarification entre identité d'authentification et jeton CSRF sont consignées dans les sections concernées. La demande ultérieure d'une page d'accueil est suivie séparément à l'étape 7. Aucun test n'a été créé ou exécuté, conformément à la stratégie du projet. Le plan reste la source de vérité technique de cette fonctionnalité.
 
 ---
 
@@ -718,6 +728,28 @@ La version PHP IONOS doit être confirmée avant le premier code. Les signatures
 - Toute classe et toute méthode créée comporte une documentation en français.
 - Aucun message de commit n'est proposé tant que le code n'a pas été effectivement réalisé et relu comme sain.
 
+### Étape 7 — Créer une page d'accueil
+
+Cette extension répond à la demande formulée après la clôture du périmètre initial de `login.php`. Elle ne crée aucune page fonctionnelle ni aucun accès supplémentaire.
+
+#### 7.1 Créer la landing page de `public/index.php`
+
+- [X] **Objectif :** remplacer le contenu provisoire de `public/index.php` par une page d'accueil cohérente avec l'interface de connexion.
+- **Fichiers concernés :** `public/index.php`, `src/ConstantesAuthentification.php`, `public/assets/css/login.css`. Réutiliser `public/assets/js/login.js` sans le modifier.
+- **Contenu proposé, à valider avant codage :**
+  - titre : « Bienvenue aux Jeux Assemblées 2026 » ;
+  - introduction : « Retrouvez ici les accès aux espaces des Jeux Assemblées 2026. » ;
+  - action principale : « Accéder aux espaces », lien interne vers `login.php`.
+- **Comportement et présentation :**
+  - réutiliser la structure visuelle, les variables de thème et le bouton de bascule clair/sombre de `login.php` ;
+  - conserver le thème sombre par défaut et la mémorisation du choix ;
+  - rendre la page responsive et accessible ;
+  - ne pas ajouter de traitement d'authentification ni de destination de redirection automatique.
+- **Textes applicatifs :** ajouter les textes de la page aux constantes existantes et adapter leur documentation de classe en français si nécessaire.
+- **Validation préalable :** valider le contenu proposé et les fichiers à modifier avant l'écriture du code.
+- **Validation après réalisation :** vérifier la syntaxe PHP de `public/index.php` et effectuer une revue statique des chemins, textes et liens. Aucun test ni contrôle visuel ne sera exécuté conformément à la stratégie du projet.
+- **Bilan post-réalisation :** `public/index.php` présente le titre, le texte d'introduction et le lien interne vers `login.php`. Il réutilise la feuille de style et le script de thème communs ; `login.css` fournit la mise en page de l'accueil et le style du lien d'action. Les trois textes de l'accueil sont centralisés dans `ConstantesAuthentification`, dont le DocBlock couvre désormais les pages d'accueil et de connexion. `php -l` ne signale aucune erreur pour `public/index.php` et `ConstantesAuthentification.php` ; la revue statique et `git diff --check` sont passés. Aucun test ni contrôle visuel n'a été exécuté, conformément au plan.
+
 ---
 
-**Fin du plan d'implémentation de `public/login.php`.**
+**Fin du plan d'implémentation de `public/login.php` et de son extension d'accueil.**
