@@ -1,0 +1,55 @@
+{
+    "partie": {
+        "etat": "En attente",
+        "horodatages": {
+            "demarrage": null,
+            "pause": null,
+            "reprise": null,
+            "fin": null
+        },
+        "chronometrage": {
+            "duree_initiale_compte_a_rebours_secondes": null,
+            "temps_ecoule_secondes": 0,
+            "temps_restant_secondes": null,
+            "temps_pause_cumule_secondes": 0
+        }
+    },
+    "equipes": {
+        "1": {
+            "nombre_tentatives_porte": 0,
+            "etat_porte": "fermée",
+            "porte_ouverte": false,
+            "etat_resolution_annee": "non_resolue",
+            "annee_saisie": null,
+            "instant_validation_correcte": null,
+            "temps_resolution_secondes": null
+        },
+        "2": {
+            "nombre_tentatives_porte": 0,
+            "etat_porte": "fermée",
+            "porte_ouverte": false,
+            "etat_resolution_annee": "non_resolue",
+            "annee_saisie": null,
+            "instant_validation_correcte": null,
+            "temps_resolution_secondes": null
+        },
+        "3": {
+            "nombre_tentatives_porte": 0,
+            "etat_porte": "fermée",
+            "porte_ouverte": false,
+            "etat_resolution_annee": "non_resolue",
+            "annee_saisie": null,
+            "instant_validation_correcte": null,
+            "temps_resolution_secondes": null
+        },
+        "4": {
+            "nombre_tentatives_porte": 0,
+            "etat_porte": "fermée",
+            "porte_ouverte": false,
+            "etat_resolution_annee": "non_resolue",
+            "annee_saisie": null,
+            "instant_validation_correcte": null,
+            "temps_resolution_secondes": null
+        }
+    }
+}

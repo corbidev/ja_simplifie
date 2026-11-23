@@ -1,0 +1,2511 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#080b10">
+<title>Stargate — salle d'activation</title>
+<style>
+:root{color-scheme:dark;--line:#40576b;--blue:#b9dff3;--amber:#ffb94c}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070b;font-family:Arial,Helvetica,sans-serif;color:#e0edf7}
+#stage{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 42%,#202936 0,#0b1018 60%,#030509 100%)}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+#console{position:fixed;z-index:5;left:0;right:0;bottom:0;padding:7px 10px max(8px,env(safe-area-inset-bottom));pointer-events:none;background:linear-gradient(180deg,transparent 0%,rgba(3,6,11,.55) 16%,rgba(3,6,11,.92) 48%,rgba(3,6,11,.98) 100%)}
+
+.panel{pointer-events:auto;position:relative;max-width:520px;height:clamp(250px,39vh,330px);margin:auto;display:flex;align-items:center;justify-content:center;background:transparent;border:0;padding:0;overflow:visible;perspective:1100px;isolation:isolate}
+.panel::before{content:"";position:absolute;left:1%;right:1%;top:3%;height:87%;border-radius:50%;z-index:0;background:radial-gradient(ellipse at 22% 18%,#d8c59b35 0,transparent 22%),radial-gradient(ellipse at 78% 24%,#b8c4cd24 0,transparent 28%),repeating-linear-gradient(118deg,#ffffff05 0 1px,#00000008 1px 3px,transparent 3px 7px),linear-gradient(155deg,#77756a 0%,#353938 12%,#222626 33%,#111719 58%,#343735 77%,#777265 94%,#252a2d 100%);border:2px solid #090d11;box-shadow:inset 0 3px 5px #e5e9ed66,inset 0 -12px 19px #000e,0 2px 0 #07090b,0 6px 0 #31383d,0 9px 0 #0b0e11,0 16px 22px #000d;transform:rotateX(24deg) scaleY(.91)}
+.panel::after{display:none}
+.topline{display:none;position:absolute;left:5px;right:5px;top:0;justify-content:space-between;align-items:center;gap:8px;color:#a9c3d8;font-size:10px;font-weight:800;letter-spacing:.1em;text-shadow:0 1px 3px #000}
+#status{color:#ff8e88;text-align:right}.slots{display:none}
+.keys{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotateX(19deg) scaleY(.94);transform-origin:center;width:min(83vw,370px);aspect-ratio:1.12/1;z-index:1;border-radius:50%;display:block;background:radial-gradient(ellipse at 26% 20%,#b6a57a26 0,transparent 23%),radial-gradient(ellipse at 74% 74%,#00000045 0,transparent 30%),repeating-linear-gradient(7deg,#ffffff04 0 1px,transparent 1px 4px),radial-gradient(ellipse at 43% 30%,#4c4d45 0%,#343631 31%,#242725 57%,#14191b 79%,#080c10 100%);border:5px solid #101418;box-shadow:0 0 0 2px #777d7c,0 0 0 5px #20262b,0 0 0 8px #8a8c83,0 0 0 11px #292e32,0 13px 0 #101519,0 19px 24px #000,inset 0 3px 5px #e4e0cc55,inset 0 -17px 24px #000c,inset 0 0 0 2px #0a0d0f}
+.keys::before{content:"";position:absolute;inset:2%;border-radius:50%;pointer-events:none;border:2px solid #9c9272;box-shadow:inset 0 2px 5px #000b,0 1px 2px #d5c69a33}.keys::after{content:"";position:absolute;inset:5%;border-radius:50%;pointer-events:none;background:repeating-radial-gradient(ellipse at 50% 50%,transparent 0 45%,#00000008 45.3% 45.8%,transparent 46% 100%);opacity:.7}
+.key{position:absolute;left:50%;top:50%;width:20%;height:20%;padding:0;border:0;border-radius:50%;background:radial-gradient(ellipse at 32% 25%,#514f43 0%,#282a27 57%,#111619 100%);color:#b6ad8e;font-size:clamp(15px,4vw,23px);font-family:Arial,sans-serif;font-weight:700;text-shadow:0 1px 2px #000,0 0 2px #c4b68a;transform:translate(-50%,-50%);display:grid;place-items:center;box-shadow:0 2px 0 #050708,0 3px 4px #0008,inset 0 1px 2px #b9b49a33,inset 0 -3px 4px #0009;filter:drop-shadow(0 1px 1px #000)}
+.key::before{content:"";position:absolute;inset:2px;border-radius:50%;border:2px solid #5e5b4d;box-shadow:0 1px 0 #a9a18455,inset 0 2px 4px #000b;pointer-events:none;opacity:.9}.key:active{transform:translate(-50%,-50%) scale(.94)}
+.key.picked{color:#fff3c7;text-shadow:0 0 8px #ffe28a,0 0 15px #ffbd45,0 1px 2px #000;filter:brightness(1.35) drop-shadow(0 0 5px #ffbf4c)}.key.picked::before{border-color:#ffdf8a;box-shadow:0 0 13px #ffcb5b,inset 0 0 9px #e8bd4d88;opacity:1}
+/* V68 — bouton central en forme de champignon : calotte bombée et convexe,
+   occupant 95 % du diamètre de sa base métallique. */
+#engage{
+  position:absolute;left:50%;top:44%;
+  transform:translate(-50%,-50%);
+  transform-origin:center;
+  width:23%;aspect-ratio:1;border-radius:50%;border:0;
+  isolation:isolate;
+  background:radial-gradient(ellipse at 31% 17%,#e6e9e8 0%,#9ba3a6 9%,#535b60 24%,#252c30 50%,#111619 72%,#05080a 100%);
+  color:transparent;
+  box-shadow:0 2px 0 #050708,0 4px 0 #737a7d,0 7px 0 #202629,0 10px 13px #000e,
+    inset 0 2px 3px #f5f6f488,inset 0 -5px 8px #000c;
+  z-index:3;padding:0;font-size:0;
+  filter:drop-shadow(0 0 8px #ff302b66);
+}
+/* Socle métallique — conserve le relief et la fixation de la pièce. */
+#engage::before{
+  content:"";position:absolute;inset:-17%;border-radius:50%;
+  background:linear-gradient(145deg,#d7dcda 0%,#737c80 13%,#343b3f 29%,#171d20 47%,#070a0c 57%,#a9b0b1 72%,#555d60 86%,#171b1e 100%);
+  box-shadow:0 2px 0 #050708,0 4px 0 #858b8d,0 7px 0 #171b1e,0 10px 14px #000c;
+  z-index:-1;pointer-events:none;
+}
+/* Calotte rouge convexe : 1.273× le bouton hôte, soit 95 % du socle
+   qui mesure 1.34×. Les ombres sont externes / de bord, sans effet d'enfoncement. */
+#engage::after{
+  content:"";position:absolute;inset:-13.65%;
+  border-radius:50%;border:2px solid #ffb9a8;
+  background:
+    radial-gradient(ellipse at 28% 17%,#fff9ef 0%,#ffd7c8 3.5%,#ff9b83 8%,#ff5b45 17%,transparent 31%),
+    radial-gradient(ellipse at 50% 34%,#ff5140 0%,#fa241f 35%,#df0718 61%,#a90012 82%,#62000b 100%);
+  box-shadow:
+    0 -2px 2px #fff1e5,
+    0 3px 0 #8c0710,
+    0 5px 5px #280207,
+    0 0 12px #ff382fdd,
+    0 0 26px #ff261f77;
+  pointer-events:none;
+}
+#engage.repair-mode{cursor:pointer;filter:drop-shadow(0 0 12px #168cffaa)}
+#engage.action.engage.repair-mode::after{border-color:#b8eaff;background:radial-gradient(ellipse at 34% 17%,#f4ffff 0%,#c8f2ff 7%,#65caff 20%,#168cff 43%,#0759c8 66%,#063b83 84%,#021b45 100%);box-shadow:inset 0 4px 5px #fff,inset 0 10px 12px #73d8ff,inset 0 -12px 15px #05285f,0 0 12px #168cff,0 0 24px #168cff88}
+#engage:disabled{opacity:1;filter:none}
+#engage:active{transform:translate(-50%,-48%) scale(.97);filter:brightness(.96) drop-shadow(0 0 7px #ff342e66)}
+#engage:active::after{inset:10%;box-shadow:inset 0 3px 5px #fff8,inset 0 -8px 12px #580009,0 0 9px #ff382f99}
+#clear{position:absolute;right:6px;bottom:0;width:36px;height:22px;padding:0;font-size:9px;opacity:.75;background:#111923;color:#bac8d2;border:1px solid #46525d;border-radius:5px}
+#message{display:none;position:absolute;left:5px;right:45px;bottom:0;min-width:0;color:#a7b9c8;font-size:10px;line-height:1.3;text-shadow:0 1px 3px #000}
+.action{height:39px;padding:0 11px;border:1px solid #526b7d;border-radius:9px;background:#142431;color:#dcebf5;font-weight:800;font-size:11px;white-space:nowrap}
+.action.engage{border-color:#a77b3c;background:linear-gradient(#67481f,#24180d);color:#ffe2a6}
+.action:disabled{opacity:.35}
+@media(max-height:700px){.panel{height:clamp(180px,32vh,240px)}.keys{width:min(68vw,270px)}}
+#hint{display:none;position:fixed;z-index:2;top:calc(env(safe-area-inset-top) + 7px);left:50%;transform:translateX(-50%);color:#b7c7d4;background:#07101bcc;border:1px solid #2a3b4b;border-radius:20px;padding:5px 10px;font-size:10px;letter-spacing:.08em;white-space:nowrap;pointer-events:none}
+@media(max-height:700px){.panel{padding:7px 9px}.slots{margin:6px 0}.slot{height:30px}.key{height:35px}.bottom{margin-top:6px}.action{height:34px}}
+
+/* V6 — console glyphs only: remove the individual round button rims.
+   Keep the gate's 3D chevron symbols and materials untouched. */
+.key{
+  width:22%;
+  height:22%;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  filter:none!important;
+  color:#c9c0a0;
+  font-size:clamp(19px,5.1vw,29px);
+  font-weight:800;
+  text-shadow:
+    0 -1px 0 #f1e8c8,
+    0 1px 0 #77715b,
+    0 2px 1px #171813,
+    0 3px 2px #000,
+    0 0 2px #d9cda6;
+}
+.key::before{display:none!important}
+.key.picked{
+  color:#fff0c4;
+  text-shadow:
+    0 -1px 0 #fff8df,
+    0 1px 0 #8d7c4d,
+    0 2px 2px #15130b,
+    0 0 3px #e2c879,
+    0 0 5px #d5ad4b88;
+  filter:none!important;
+}
+.key.picked::before{display:none!important}
+
+
+/* V7 — larger, subtly tilted cast-aluminium console glyphs.
+   This targets .key buttons only; gate symbols/chevrons are left untouched. */
+.key{
+  font-size:clamp(24px,6.2vw,36px)!important;
+  font-weight:800!important;
+  color:#aeb8bf!important;
+  transform:translate(-50%,-50%) rotate(-7deg)!important;
+  -webkit-text-stroke:.35px #626d75;
+  text-shadow:
+    0 -1.5px 0 #f3f6f7,
+    0 0 1px #e3e8eb,
+    0 1px 0 #77828a,
+    0 2px 0 #4b555d,
+    0 3px 1px #20262b,
+    0 4px 3px #000,
+    1px 0 1px #dce2e5,
+    -1px 0 1px #68737a!important;
+  filter:drop-shadow(0 1px 1px #000)!important;
+}
+.key:active{
+  transform:translate(-50%,-50%) rotate(-7deg) scale(.96)!important;
+}
+/* Slightly muted warm-neutral aluminum while selected; the symbol itself lights,
+   without creating a luminous ring around its former button position. */
+.key.picked{
+  color:#fff0c9!important;
+  -webkit-text-stroke:.4px #a88b50;
+  text-shadow:
+    0 -1px 0 #fff9e9,
+    0 1px 0 #a68a54,
+    0 2px 1px #2c2415,
+    0 0 3px #dfc27b,
+    0 0 5px #d5ad4b66!important;
+  filter:drop-shadow(0 0 2px #d9b75d66)!important;
+}
+
+
+/* V8 — refined console surface inspired by the physical reference:
+   restrained cast-metal grain, larger and more noticeably tilted glyphs.
+   Gate geometry/materials are intentionally not targeted. */
+.keys{
+  background:
+    radial-gradient(ellipse at 19% 13%,rgba(198,174,123,.10) 0,transparent 24%),
+    radial-gradient(ellipse at 81% 82%,rgba(0,0,0,.19) 0,transparent 34%),
+    repeating-linear-gradient(2deg,rgba(230,225,208,.018) 0 1px,rgba(0,0,0,.022) 1px 3px,transparent 3px 6px),
+    radial-gradient(ellipse at 46% 29%,#4b4b43 0%,#353631 34%,#282a27 61%,#1c2020 83%,#111619 100%)!important;
+}
+.panel::before{
+  background:
+    radial-gradient(ellipse at 22% 17%,rgba(205,185,145,.12) 0,transparent 23%),
+    radial-gradient(ellipse at 78% 76%,rgba(0,0,0,.17) 0,transparent 29%),
+    repeating-linear-gradient(116deg,rgba(230,225,211,.018) 0 1px,rgba(0,0,0,.025) 1px 4px,transparent 4px 9px),
+    linear-gradient(155deg,#68685f 0%,#3c3f3c 15%,#2c302e 38%,#202524 62%,#383a35 81%,#625f54 96%,#292e30 100%)!important;
+}
+.key{
+  font-size:clamp(29px,7.5vw,44px)!important;
+  transform:translate(-50%,-50%) rotate(-14deg)!important;
+  -webkit-text-stroke:.45px #59636b!important;
+  color:#b7c0c6!important;
+  text-shadow:
+    0 -1.7px 0 #f4f6f6,
+    1px 0 0 #dce1e4,
+    -1px 0 0 #737d84,
+    0 1px 0 #8b969d,
+    0 2px 0 #59636a,
+    0 3px 0 #333b41,
+    0 4px 1px #151a1e,
+    0 5px 3px #000!important;
+}
+.key:active{
+  transform:translate(-50%,-50%) rotate(-14deg) scale(.96)!important;
+}
+.key.picked{
+  color:#fff0c9!important;
+  text-shadow:
+    0 -1.5px 0 #fff9e9,
+    1px 0 0 #f4e5b6,
+    -1px 0 0 #a48a50,
+    0 1px 0 #b99b5b,
+    0 2px 0 #796337,
+    0 3px 1px #302716,
+    0 0 4px #d7b65c99!important;
+}
+
+
+/* V9 — delicate aged cast-metal tabletop + larger glyph artwork.
+   Console-only selectors; no gate symbol meshes/materials are restyled here. */
+.keys{
+  background:
+    radial-gradient(ellipse at 17% 13%,rgba(205,180,128,.15) 0,transparent 25%),
+    radial-gradient(ellipse at 84% 78%,rgba(0,0,0,.28) 0,transparent 36%),
+    repeating-linear-gradient(7deg,rgba(235,227,207,.025) 0 1px,rgba(4,5,5,.045) 1px 2px,transparent 2px 5px),
+    repeating-linear-gradient(97deg,rgba(180,174,153,.018) 0 1px,transparent 1px 7px),
+    radial-gradient(ellipse at 48% 36%,#4a4a42 0%,#383a34 35%,#2c302d 64%,#1e2323 86%,#14191b 100%)!important;
+  box-shadow:
+    inset 0 1px 2px rgba(240,231,202,.28),
+    inset 0 -16px 24px rgba(0,0,0,.48),
+    0 2px 0 #090d10,
+    0 7px 14px #0009!important;
+}
+.panel::before{
+  background:
+    radial-gradient(ellipse at 21% 16%,rgba(201,175,125,.17) 0,transparent 23%),
+    radial-gradient(ellipse at 78% 74%,rgba(0,0,0,.26) 0,transparent 31%),
+    repeating-linear-gradient(116deg,rgba(224,215,194,.026) 0 1px,rgba(8,9,8,.04) 1px 2px,transparent 2px 6px),
+    repeating-linear-gradient(14deg,rgba(177,171,153,.018) 0 1px,transparent 1px 8px),
+    linear-gradient(155deg,#66665d 0%,#484941 14%,#363833 34%,#292d2b 58%,#343732 78%,#57564d 94%,#292e30 100%)!important;
+  box-shadow:
+    inset 0 1px 2px rgba(238,229,205,.25),
+    inset 0 -14px 20px rgba(0,0,0,.5),
+    0 3px 7px rgba(0,0,0,.65)!important;
+}
+.key{
+  font-size:clamp(34px,9vw,58px)!important;
+  font-weight:700!important;
+  transform:translate(-50%,-50%) rotate(-19deg)!important;
+  -webkit-text-stroke:.25px #626d75!important;
+  text-shadow:
+    0 -1.5px 0 #f0f3f4,
+    1px 0 0 #dce1e4,
+    -1px 0 0 #727c83,
+    0 1px 0 #909ba2,
+    0 2px 0 #5b656c,
+    0 3px 0 #343c42,
+    0 4px 1px #151a1e,
+    0 5px 3px #000!important;
+}
+.key:active{transform:translate(-50%,-50%) rotate(-19deg) scale(.97)!important}
+.key.picked{
+  text-shadow:
+    0 -1.5px 0 #fff9e9,
+    1px 0 0 #f4e5b6,
+    -1px 0 0 #a48a50,
+    0 1px 0 #b99b5b,
+    0 2px 0 #796337,
+    0 3px 1px #302716,
+    0 0 3px #d7b65d88!important;
+}
+/* Every clamp insert gets its own emissive face. This avoids changing the
+   shared red-clamp material and makes the success blue reliably visible. */
+
+
+/* V64 — relooking console : plateau 3D incliné dans le même plan que son support.
+   Ces règles restent limitées à la console ; porte, vortex, robot et passerelle intacts. */
+.panel::before{
+  transform:rotateX(24deg) scaleY(.91);
+  background:
+    radial-gradient(ellipse at 18% 13%,rgba(218,199,151,.13) 0,transparent 24%),
+    radial-gradient(ellipse at 82% 83%,rgba(0,0,0,.3) 0,transparent 35%),
+    repeating-linear-gradient(117deg,rgba(224,218,199,.025) 0 1px,rgba(0,0,0,.045) 1px 2px,transparent 2px 7px),
+    linear-gradient(155deg,#77766c 0%,#4b4c45 13%,#343732 35%,#252a29 60%,#333631 79%,#666358 94%,#272c2f 100%)!important;
+  border:2px solid #090d11;
+  box-shadow:inset 0 2px 3px rgba(235,232,218,.36),
+    inset 0 -17px 22px rgba(0,0,0,.58),
+    0 2px 0 #07090b,0 6px 0 #30363a,0 9px 0 #0b0e11,0 16px 22px #000d!important;
+}
+.keys{
+  transform:translate(-50%,-50%) rotateX(24deg) scaleY(.94)!important;
+  transform-origin:center;
+  background:
+    radial-gradient(ellipse at 22% 17%,rgba(201,181,137,.12) 0,transparent 24%),
+    radial-gradient(ellipse at 78% 78%,rgba(0,0,0,.3) 0,transparent 32%),
+    repeating-linear-gradient(8deg,rgba(235,228,207,.025) 0 1px,rgba(5,6,5,.045) 1px 2px,transparent 2px 6px),
+    repeating-linear-gradient(98deg,rgba(183,177,156,.016) 0 1px,transparent 1px 8px),
+    radial-gradient(ellipse at 48% 36%,#4b4c43 0%,#383a34 36%,#292d2a 66%,#1b2021 87%,#111619 100%)!important;
+  border:5px solid #111619;
+  box-shadow:0 0 0 2px #777d7c,0 0 0 5px #252b30,0 0 0 8px #898b82,
+    0 0 0 11px #292f33,0 13px 0 #101519,0 19px 24px #000,
+    inset 0 3px 6px rgba(239,235,218,.3),inset 0 -18px 26px #000c,
+    inset 0 0 0 2px #0a0d0f!important;
+}
+.keys::before{
+  inset:2%;border:2px solid #a49a7c;
+  box-shadow:inset 0 2px 6px #000c,0 1px 2px rgba(221,205,164,.25),
+    0 0 0 1px rgba(0,0,0,.55)!important;
+}
+.keys::after{inset:5%;opacity:.45}
+.key{transform:translate(-50%,-50%) rotate(-19deg)!important}
+.key:active{transform:translate(-50%,-50%) rotate(-19deg) scale(.97)!important}
+
+
+/* V65 — correction d'angle : le plateau et tous ses éléments (glyphes + bouton)
+   partagent désormais une inclinaison plus prononcée, cohérente avec le support. */
+.panel::before{
+  transform:rotateX(39deg) scaleY(1.02)!important;
+  transform-origin:center bottom!important;
+}
+.keys{
+  transform:translate(-50%,-50%) rotateX(39deg) scaleY(1.02)!important;
+  transform-origin:center bottom!important;
+}
+/* Les caractères restent posés sur le même plan incliné que le plateau.
+   On conserve leur rotation propre dans le plan, sans les redresser face caméra. */
+.key{
+  transform:translate(-50%,-50%) rotate(-19deg)!important;
+  transform-origin:center center!important;
+}
+.key:active{
+  transform:translate(-50%,-50%) rotate(-19deg) scale(.97)!important;
+}
+
+
+
+/* V67 — perspective plus marquée : le plateau doit présenter un ovale aussi aplati visuellement que le bouton central, sans déplacer la console.
+   On incline le conteneur entier : plateau, symboles, bouton central et reliefs
+   restent dans un même plan 3D. Les anciens rotateX internes sont neutralisés
+   afin d'éviter une double inclinaison ou des éléments qui resteraient à plat. */
+.panel{
+  transform:perspective(900px) rotateX(43deg)!important;
+  transform-origin:center bottom!important;
+}
+.panel::before{
+  transform:none!important;
+  transform-origin:center center!important;
+}
+.panel .keys{
+  transform:translate(-50%,-50%)!important;
+  transform-origin:center center!important;
+}
+.panel #engage{
+  transform:translate(-50%,-50%)!important;
+  transform-origin:center center!important;
+}
+.panel .key{
+  transform:translate(-50%,-50%) rotate(-7deg)!important;
+  transform-origin:center center!important;
+}
+.panel .key:active{
+  transform:translate(-50%,-50%) rotate(-7deg) scale(.96)!important;
+}
+/* V68 final override: raised mushroom cap, wide and convex, covering 95% of its metal base. */
+.panel #engage::after{
+  inset:-13.65%!important;
+  border-radius:50%!important;
+  background:
+    radial-gradient(ellipse at 28% 17%,#fff9ef 0%,#ffd7c8 3.5%,#ff9b83 8%,#ff5b45 17%,transparent 31%),
+    radial-gradient(ellipse at 50% 34%,#ff5140 0%,#fa241f 35%,#df0718 61%,#a90012 82%,#62000b 100%)!important;
+  box-shadow:0 -2px 2px #fff1e5,0 3px 0 #8c0710,0 5px 5px #280207,
+    0 0 12px #ff382fdd,0 0 26px #ff261f77!important;
+}
+.panel #engage:active::after{inset:-11.5%!important}
+
+/* Yellow reset control: requires three consecutive taps, then the red control. */
+.action.reset{color:#171006!important;background:linear-gradient(180deg,#fff08a 0%,#ffd12e 42%,#c88a08 100%)!important;border:1px solid #fff0a0!important;box-shadow:inset 0 1px 2px #fff8c9,0 2px 0 #654407,0 4px 8px #000b!important;text-shadow:0 1px 0 #fff5b0!important;font-weight:900!important;letter-spacing:.08em}
+.action.reset.armed{box-shadow:0 0 0 2px #fff4a8,0 0 14px #ffcf24, inset 0 1px 2px #fff8c9!important}
+/* Central red mushroom: normally dark; lit only for a full chevron lock or RESET countdown. */
+.panel #engage::after{
+  background:radial-gradient(ellipse at 50% 18%,#3d1719 0%,#26090b 48%,#100507 78%,#050304 100%)!important;
+  box-shadow:inset 0 5px 12px #000e,0 2px 0 #08090b,0 4px 7px #000b!important;
+  filter:saturate(.35) brightness(.42)!important;
+}
+.panel #engage.red-lit::after{
+  background:
+    radial-gradient(ellipse at 30% 14%,#fff9e9 0%,#ffd8c8 3%,#ff9a7f 8%,#ff5140 18%,transparent 34%),
+    radial-gradient(ellipse at 50% 36%,#ff5140 0%,#fa241f 35%,#df0718 61%,#a90012 82%,#62000b 100%)!important;
+  box-shadow:0 -2px 2px #fff1e5,0 3px 0 #8c0710,0 5px 5px #280207,
+    0 0 12px #ff382fdd,0 0 26px #ff261f77!important;
+  filter:none!important;
+}
+
+/* During the 5-second RESET confirmation window, the mushroom is amber/yellow. */
+.panel #engage.reset-yellow::after{
+  background:
+    radial-gradient(ellipse at 30% 14%,#fffef0 0%,#fff6ad 4%,#ffe66f 10%,#ffd52c 20%,transparent 35%),
+    radial-gradient(ellipse at 50% 36%,#fff05a 0%,#ffd21d 34%,#f0a900 62%,#bd7600 82%,#704000 100%)!important;
+  box-shadow:0 -2px 2px #fff9d6,0 3px 0 #9b6500,0 5px 5px #382000,
+    0 0 13px #ffdf32dd,0 0 28px #ffc21f88!important;
+  filter:none!important;
+}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="hint">SALLE D’ACTIVATION · VUE FIXE</div>
+<section id="console" aria-label="Console de commande Stargate">
+ <div class="panel">
+  <div class="topline"><span>CONSOLE D’ACTIVATION</span><span id="status">CHEVRONS ÉTEINTS</span></div>
+  <div class="slots" id="slots" aria-label="Adresse saisie"></div>
+  <div class="keys" id="keys" aria-label="Symboles de la console"></div>
+  <button class="action engage" id="engage" aria-label="Engager la porte" title="Engager">ENGAGER</button>
+  <button class="action reset" id="clear" aria-label="Réinitialisation générale">RESET</button>
+  <span id="message">Sélectionne les symboles gravés sur la console, puis appuie sur le bouton rouge.</span>
+ </div>
+</section>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+/* Scene setup — authored geometry; no background image is used. */
+const stage=document.querySelector('#stage');
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.18;
+stage.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color('#080b11');
+scene.fog=new THREE.Fog('#080b11',24,55);
+const camera=new THREE.PerspectiveCamera(37,innerWidth/innerHeight,.1,100);
+// Frame the complete Stargate and the lower bridge in the visible area above the fixed console.
+camera.position.set(0,5.0,21.5);
+camera.lookAt(0,3.35,0);
+
+scene.add(new THREE.HemisphereLight(0x9aaec9,0x151923,1.25));
+const keyLight=new THREE.DirectionalLight(0xd9e6f5,2.0);keyLight.position.set(-5,9,8);scene.add(keyLight);
+// No luminous orb in the inactive gate: warm illumination is moved to the overhead machinery.
+const warm=new THREE.PointLight(0xffb14a,8,6);warm.position.set(0,10.6,-2.8);scene.add(warm);
+const sideL=new THREE.SpotLight(0x7e9bb7,50,22,Math.PI/5,.65,1.5);sideL.position.set(-7,7,5);sideL.target.position.set(0,3,0);scene.add(sideL,sideL.target);
+const sideR=new THREE.SpotLight(0x819ab7,45,22,Math.PI/5,.65,1.5);sideR.position.set(7,7,5);sideR.target.position.set(0,3,0);scene.add(sideR,sideR.target);
+
+const mat=(color,metalness=.65,roughness=.42)=>new THREE.MeshStandardMaterial({color,metalness,roughness});
+const steel=mat('#788691',.82,.35), brightSteel=mat('#c0c8ce',.8,.28), darkSteel=mat('#252e38',.8,.5), black=mat('#090e16',.35,.5), wallMat=mat('#171c25',.45,.65), amberMat=new THREE.MeshStandardMaterial({color:'#ff9e2c',emissive:'#ff8b12',emissiveIntensity:1.5,metalness:.3,roughness:.25}), amberDark=mat('#6c3820',.7,.45), glass=new THREE.MeshBasicMaterial({color:'#060a12',transparent:true,opacity:0,depthWrite:false});
+const room=new THREE.Group();scene.add(room);
+function box(parent,w,h,d,material,x,y,z){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);parent.add(o);return o}
+function cyl(parent,r1,r2,len,material,x,y,z,rotX=0,rotY=0,rotZ=0,segments=32){const o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,len,segments),material);o.position.set(x,y,z);o.rotation.set(rotX,rotY,rotZ);parent.add(o);return o}
+function line(parent,a,b,r,material){const va=new THREE.Vector3(...a),vb=new THREE.Vector3(...b),d=new THREE.Vector3().subVectors(vb,va);const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),8),material);o.position.copy(va).add(vb).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());parent.add(o);return o}
+function torus(parent,R,t,material,z,segments=128,tubular=12){const o=new THREE.Mesh(new THREE.TorusGeometry(R,t, tubular,segments),material);o.position.z=z;parent.add(o);return o}
+
+/* Gate: heavy concentric ring stack, segmented cast-metal surface */
+const gate=new THREE.Group();gate.position.set(0,6.35,-.45);scene.add(gate);
+// The outer casing and suspension remain fixed. Only the inner rotating ring
+// assembly turns during the activation sequence.
+const innerRing=new THREE.Group();gate.add(innerRing);
+torus(gate,3.28,.28,darkSteel,0);
+torus(gate,3.18,.19,steel,.08);
+torus(innerRing,3.03,.105,brightSteel,.16);
+torus(innerRing,2.91,.12,darkSteel,.23);
+torus(innerRing,2.78,.16,steel,.29);
+torus(innerRing,2.64,.075,brightSteel,.35);
+torus(innerRing,2.48,.13,darkSteel,.4);
+torus(innerRing,2.39,.10,brightSteel,.43);
+torus(innerRing,2.31,.06,steel,.46);
+const aperture=new THREE.Mesh(new THREE.CircleGeometry(2.29,128),glass);aperture.position.z=.31;gate.add(aperture); // invisible while inactive; room depth remains visible
+// ring face segmented panels with seams and engraved marks
+const panelMat=[mat('#87939d',.78,.38),mat('#65717c',.8,.4),mat('#a6b0b8',.75,.34)];
+for(let i=0;i<48;i++){
+ const a=i*Math.PI*2/48;
+ const arc=new THREE.Mesh(new THREE.BoxGeometry(.34,.13,.09),panelMat[i%3]);
+ arc.position.set(Math.cos(a)*2.82,Math.sin(a)*2.82,.39);arc.rotation.z=a;innerRing.add(arc);
+ const mark=new THREE.Mesh(new THREE.BoxGeometry(.045,.13,.025),darkSteel);
+ mark.position.set(Math.cos(a)*2.78,Math.sin(a)*2.78,.46);mark.rotation.z=a;innerRing.add(mark);
+}
+// Outer radial ribs, machined bolts
+for(let i=0;i<32;i++){
+ const a=i*Math.PI*2/32;
+ const rib=new THREE.Mesh(new THREE.BoxGeometry(.12,.42,.12),brightSteel);
+ rib.position.set(Math.cos(a)*3.14,Math.sin(a)*3.14,.18);rib.rotation.z=a;gate.add(rib);
+ const bolt=cyl(gate,.035,.035,.035,darkSteel,Math.cos(a)*3.03,Math.sin(a)*3.03,.47,Math.PI/2,0,0,12);
+}
+// Nine gate-address symbols: match the nine symbols on the control console.
+// Their angular spacing is exact (360 / 9 = 40 degrees), with the first symbol
+// centered at the top. Place them on the solid ring band, away from the aperture edge.
+const gateAddressSymbols=['☉','△','◇','⌘','☽','✶','⊕','∿','⋈'];
+const gateGlyphRadius=2.56;
+for(let i=0;i<gateAddressSymbols.length;i++){
+ const a=Math.PI/2-i*2*Math.PI/gateAddressSymbols.length;
+ const g=new THREE.Group();
+ g.position.set(Math.cos(a)*gateGlyphRadius,Math.sin(a)*gateGlyphRadius,.72); // lift glyphs clear of the rotating ring's raised metal ribs
+ g.rotation.z=a-Math.PI/2;
+ innerRing.add(g);
+ const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
+ const ctx=canvas.getContext('2d');
+ ctx.clearRect(0,0,256,256);
+ ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.font='bold 172px "Noto Sans Symbols 2", "DejaVu Sans", serif';
+ // Copper-bronze engraved finish: dark recessed outline, warm bronze
+ // body, and a restrained copper highlight (not a bright yellow glow).
+ ctx.lineJoin='round';
+ ctx.lineWidth=10;ctx.strokeStyle='rgba(48,28,17,.98)';
+ ctx.strokeText(gateAddressSymbols[i],128,132);
+ ctx.shadowColor='rgba(184,112,55,.18)';ctx.shadowBlur=4;
+ ctx.fillStyle='#98603a';ctx.fillText(gateAddressSymbols[i],128,132);
+ ctx.shadowBlur=0;
+ ctx.lineWidth=3;ctx.strokeStyle='rgba(218,158,103,.88)';
+ ctx.strokeText(gateAddressSymbols[i],126,127);
+ ctx.fillStyle='#b77b4a';ctx.fillText(gateAddressSymbols[i],126,127);
+ const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;
+ const glyphMaterial=new THREE.MeshBasicMaterial({
+   map:tex,
+   // Physical depth is authoritative: symbols are mounted on the rotating
+   // ring, behind the chevron plates, the arriving robot and the foreground
+   // bridge. Keep the canvas background transparent via alphaTest.
+   transparent:true,
+   alphaTest:0.035,
+   side:THREE.DoubleSide,
+   opacity:1,
+   depthWrite:false,
+   depthTest:true,
+   color:'#c18a5b'
+ });
+ const glyphMesh=new THREE.Mesh(new THREE.PlaneGeometry(.54,.60),glyphMaterial);
+ // Keep gate glyphs in the normal depth-sorted scene. They sit behind the
+ // arriving robot and must be occluded by its opaque geometry (no overlay layer).
+ glyphMesh.renderOrder=0;
+ g.add(glyphMesh);
+}
+// Gate braces and side machinery
+for(const s of [-1,1]){
+ const x=s*3.62;
+ box(gate,.55,2.15,.42,darkSteel,x,0,-.02);
+ box(gate,.32,1.8,.46,steel,x,0,.22);
+ for(let j=-2;j<=2;j++)box(gate,.44,.09,.5,brightSteel,x,j*.34,.28);
+
+}
+
+
+// Chevron assemblies: placed in front of the red suspension clamps so their
+// illuminated faces remain readable. When selected, each chevron travels
+// inward along the ring's radius (toward the aperture), as on the reference.
+const SYMBOLS=['☉','△','◇','⌘','☽','✶','⊕','∿','⋈'];
+// Codes d'activation propres aux quatre équipes (5 symboles, ordre important).
+// Une adresse est valide si elle correspond exactement à l'un de ces tableaux.
+const TEAM_CODES = {
+  equipe1: ['☉', '△', '◇', '⌘', '☽'],
+  equipe2: ['△', '◇', '⌘', '☽', '✶'],
+  equipe3: ['◇', '⌘', '☽', '✶', '⊕'],
+  equipe4: ['⌘', '☽', '✶', '⊕', '∿']
+};
+// Équipe connectée déterminée par les paramètres d'URL.
+const TEAM_URL_PARAMS = { team: 'equipe', aliases: ['team', 'equipe', 'teamId'] };
+const TEAM_HOLOGRAM_MESSAGES = {
+  equipe1: 'MESSAGE HOLOGRAPHIQUE — ÉQUIPE 1 : TEST DE TRANSMISSION',
+  equipe2: 'MESSAGE HOLOGRAPHIQUE — ÉQUIPE 2 : TEST DE TRANSMISSION',
+  equipe3: 'MESSAGE HOLOGRAPHIQUE — ÉQUIPE 3 : TEST DE TRANSMISSION',
+  equipe4: 'MESSAGE HOLOGRAPHIQUE — ÉQUIPE 4 : TEST DE TRANSMISSION'
+};
+
+// 30 faits historiques destinés au mode libre (aucune équipe passée dans l'URL).
+// La sélection est aléatoire à chaque affichage de l'hologramme.
+const HISTORICAL_FACTS = [
+  "En 1870, Charles Taze Russell et quelques amis de Pittsburgh et d’Allegheny commencent une étude systématique de la Bible.",
+  "En 1872, le groupe d’étude de Russell approfondit la signification de la rançon offerte par Jésus.",
+  "En 1876, un article de Russell associe l’année 1914 à la fin des temps des Gentils.",
+  "En 1877, Russell et Nelson Barbour publient le livre anglais Three Worlds (Les Trois Mondes).",
+  "En juillet 1879 paraît le premier numéro anglais de Zion’s Watch Tower, l’ancêtre de La Tour de Garde.",
+  "En 1881, la Zion’s Watch Tower Tract Society est formée et un appel est lancé pour trouver 1 000 prédicateurs.",
+  "En 1884, la Zion’s Watch Tower Tract Society est enregistrée en Pennsylvanie.",
+  "En 1886 paraît en anglais le livre Le Divin Plan des Âges.",
+  "En 1891, les Étudiants de la Bible tiennent une assemblée à Allegheny, en Pennsylvanie.",
+  "En 1894, des représentants itinérants commencent à rendre visite aux groupes d’Étudiants de la Bible.",
+  "En 1900, la première filiale de la Société Watch Tower ouvre à Londres, en Angleterre.",
+  "En 1903, la distribution de tracts de maison en maison le dimanche est intensifiée.",
+  "En 1909, le siège de la Société Watch Tower est transféré à Brooklyn, New York.",
+  "En 1914, le Photo-Drame de la Création commence à être présenté; il combine images animées, diapositives et son.",
+  "En 1916, Charles Taze Russell meurt; Joseph Rutherford lui succédera à la présidence en 1917.",
+  "En 1919, les Étudiants de la Bible relancent leur activité après les épreuves de la Première Guerre mondiale.",
+  "En 1920, la Société Watch Tower commence à imprimer elle-même ses publications à Brooklyn.",
+  "En 1922, Joseph Rutherford prononce un discours radiodiffusé pour la première fois, selon la chronologie publiée par les Témoins.",
+  "En 1924, la station de radio WBBR, appartenant à la Société Watch Tower, commence à émettre.",
+  "En 1927, la prédication de maison en maison avec des phonographes portatifs se développe.",
+  "Le 26 juillet 1931, une assemblée à Columbus, dans l’Ohio, adopte le nom « Témoins de Jéhovah ».",
+  "En 1933, les Témoins de Jéhovah sont interdits en Allemagne sous le régime nazi.",
+  "En 1935, lors d’une assemblée à Washington, l’explication de la « grande foule » est présentée comme ayant une espérance terrestre.",
+  "En 1935, un lieu de réunion à Honolulu est pour la première fois appelé « Salle du Royaume ».",
+  "En 1942, Nathan Knorr devient le troisième président de la Société Watch Tower.",
+  "Le 1er février 1943, la première classe de l’École biblique de Galaad commence sa formation.",
+  "En 1943, une formation au ministère est présentée aux congrégations sous la forme d’une école.",
+  "En 1950, les Écritures grecques chrétiennes — Traduction du monde nouveau paraissent en anglais.",
+  "En 1958, l’assemblée internationale « La volonté divine » à New York rassemble des participants de 123 pays, selon la chronologie publiée.",
+  "En 1961, la Traduction du monde nouveau complète paraît en anglais en un seul volume."
+];
+// Codes présents dans l'URL : ils servent à sélectionner une équipe,
+// mais ne sont jamais affichés tels quels. Chaque code est résolu via cette table.
+// Ajouter ici les nouveaux codes d'équipe reconnus.
+const TEAM_URL_CODE_MAP = {
+  '1': 'equipe1',
+  '2': 'equipe2',
+  '3': 'equipe3',
+  '4': 'equipe4'
+};
+
+function getConnectedTeam(){
+  const aliases = TEAM_URL_PARAMS.aliases;
+  const candidates = [];
+
+  // Lit indifféremment ?equipe=1 et #equipe=1.
+  // Android peut aussi présenter le fragment sous la forme #?equipe=1.
+  const sources = [
+    String(window.location.search || '').replace(/^\?/, ''),
+    String(window.location.hash || '').replace(/^#/, '')
+  ];
+
+  for (let source of sources) {
+    try { source = decodeURIComponent(source); } catch (_) {}
+    source = source.replace(/^\?/, '');
+
+    try {
+      const params = new URLSearchParams(source);
+      for (const key of aliases) {
+        const value = params.get(key);
+        if (value !== null && value.trim() !== '') candidates.push(value.trim());
+      }
+    } catch (_) {}
+
+    // Repli tolérant pour les navigateurs/serveurs d'aperçu locaux Android.
+    for (const key of aliases) {
+      const escaped = key.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&');
+      const match = source.match(new RegExp('(?:^|[&#])' + escaped + '\\s*=\\s*([^&#]+)', 'i'));
+      if (match && match[1]) candidates.push(match[1].trim());
+    }
+  }
+
+  for (const raw of candidates) {
+    const normalized = String(raw).toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Les codes numériques de l'URL sont résolus vers une équipe déclarée.
+    if (Object.prototype.hasOwnProperty.call(TEAM_URL_CODE_MAP, normalized)) {
+      const team = TEAM_URL_CODE_MAP[normalized];
+      if (Object.prototype.hasOwnProperty.call(TEAM_CODES, team)) return team;
+    }
+    // Alias textuels éventuels, toujours limités aux équipes réellement définies.
+    const textual = /^equipe([0-9]+)$/.exec(normalized);
+    const english = /^team([0-9]+)$/.exec(normalized);
+    const team = textual ? 'equipe' + textual[1] : (english ? 'equipe' + english[1] : null);
+    if (team && Object.prototype.hasOwnProperty.call(TEAM_CODES, team)) return team;
+  }
+
+  // Paramètre absent ou code inconnu : mode libre.
+  return null;
+}
+const CONNECTED_TEAM = getConnectedTeam();
+function codeEquals(a,b){
+  return a.length === b.length && a.every((symbol,index)=>symbol===b[index]);
+}
+function isTeamCodeValid(sequence){
+  // Mode libre : toute séquence complète de cinq symboles est acceptée.
+  if (CONNECTED_TEAM === null) return sequence.length === 5;
+
+  // En mode équipe, accepter tout code officiel d'une équipe.
+  // Si le code appartient à une autre équipe que celle sélectionnée dans l'URL,
+  // le portail s'ouvre tout de même, puis le robot déclenche l'autodestruction
+  // lorsqu'il a terminé son arrivée sur la passerelle.
+  return identifyTeamFromCode(sequence) !== null;
+}
+// L'équipe affichée à l'écran est identifiée par le code réellement saisi,
+// et non par le paramètre d'URL (chaque équipe possède son code unique).
+function identifyTeamFromCode(sequence){
+  for (const [team, code] of Object.entries(TEAM_CODES)) {
+    if (codeEquals(sequence, code)) return team;
+  }
+  return null;
+}
+
+// The two lower side chevrons are positioned at the same angular spacing
+// from the upper clamp as the fixed upper chevrons: mount angle is derived
+// from (2.78, 1.48), then mirrored around that angle on each side.
+const upperMountAngle=Math.atan2(1.48,2.78)*180/Math.PI;
+const rightLowerAngle=2*upperMountAngle-50;
+const leftLowerAngle=2*(180-upperMountAngle)-130;
+const chevronAngles=[90,50,rightLowerAngle,-30,-70,-110,-150,leftLowerAngle,130];
+const chevronGroup=new THREE.Group();gate.add(chevronGroup);
+const chevrons=[];
+chevronAngles.forEach((deg,i)=>{
+ const a=deg*Math.PI/180,rad=3.30;
+ const group=new THREE.Group();
+ // Keep the top chevrons (indices 1 and 8) and upper mounts fixed.
+ // Indices 2 and 7 use the matching angular gap from their upper mount.
+ const lateralDrop=0;
+ group.position.set(Math.cos(a)*rad,Math.sin(a)*rad-lateralDrop,0.82);
+ group.rotation.z=a-Math.PI/2;
+ // Remove the four lower chevrons (1a, 1b, 2a, 2b) from view.
+ // Their dialing data and the rest of the mechanism remain untouched.
+ group.visible=![3,4,5,6].includes(i);
+ chevronGroup.add(group);
+
+ // Genuine rounded triangular chevron profile. All three vertices—including
+ // the inward-facing tip—are rounded with quadratic curves, not just bevelled.
+ function roundedChevronShape(width,height,corner=.13){
+   const vertices=[
+     new THREE.Vector2(0,-height/2),       // tip, points toward the vortex
+     new THREE.Vector2(-width/2,height/2), // left shoulder
+     new THREE.Vector2(width/2,height/2)   // right shoulder
+   ];
+   const tangentPoints=vertices.map((v,i)=>{
+     const prev=vertices[(i+vertices.length-1)%vertices.length];
+     const next=vertices[(i+1)%vertices.length];
+     const toPrev=prev.clone().sub(v).normalize();
+     const toNext=next.clone().sub(v).normalize();
+     const radius=Math.min(corner,v.distanceTo(prev)*.28,v.distanceTo(next)*.28);
+     return {before:v.clone().addScaledVector(toPrev,radius),
+             after:v.clone().addScaledVector(toNext,radius), vertex:v};
+   });
+   const sh=new THREE.Shape();
+   sh.moveTo(tangentPoints[0].after.x,tangentPoints[0].after.y);
+   for(let i=1;i<=vertices.length;i++){
+     const item=tangentPoints[i%vertices.length];
+     sh.lineTo(item.before.x,item.before.y);
+     sh.quadraticCurveTo(item.vertex.x,item.vertex.y,item.after.x,item.after.y);
+   }
+   sh.closePath();
+   return sh;
+ }
+ function chevronPlate(width,height,depth,material,z){
+   const geo=new THREE.ExtrudeGeometry(roundedChevronShape(width,height),{
+     depth,bevelEnabled:true,bevelSegments:3,steps:1,
+     bevelSize:.025,bevelThickness:.025,curveSegments:8
+   });
+   geo.translate(0,0,z);
+   const mesh=new THREE.Mesh(geo,material);
+   mesh.renderOrder=5;group.add(mesh);return mesh;
+ }
+ chevronPlate(.84,.82,.20,steel,-.08);
+ chevronPlate(.66,.66,.10,amberDark,.12);
+ chevronPlate(.51,.52,.07,darkSteel,.23);
+
+ const glowMaterial=new THREE.MeshStandardMaterial({
+   color:'#ffe1a0',emissive:'#ff9b20',emissiveIntensity:3.6,
+   metalness:.12,roughness:.24
+ });
+ const lit=chevronPlate(.49,.50,.075,glowMaterial,.30);
+ lit.visible=false;lit.renderOrder=10;
+
+ // Small rounded crossbar at the broad end of the chevron.
+ const cap=new THREE.Mesh(new THREE.BoxGeometry(.48,.075,.12),brightSteel);
+ cap.position.y=.315;cap.position.z=.17;cap.renderOrder=8;group.add(cap);
+
+ // Engraved address glyph: readable pale metal when idle, dark/inset when lit.
+ // Repaint the canvas texture when the chevron changes state.
+ const symbolCanvas=document.createElement('canvas');
+ symbolCanvas.width=512;symbolCanvas.height=512;
+ const symbolCtx=symbolCanvas.getContext('2d');
+ function paintChevronSymbol(active){
+   symbolCtx.clearRect(0,0,512,512);
+   symbolCtx.textAlign='center';symbolCtx.textBaseline='middle';
+   symbolCtx.font='bold 310px "Noto Sans Symbols 2", "DejaVu Sans", serif';
+   // Engraved metal treatment: a dark recessed edge and a restrained aluminum
+   // highlight. The active chevron reverses the contrast so the engraving reads
+   // as a shadowed groove in the illuminated face.
+   if(active){
+     symbolCtx.lineJoin='round';
+     symbolCtx.lineWidth=18;
+     symbolCtx.strokeStyle='rgba(5,9,14,.92)';
+     symbolCtx.strokeText(SYMBOLS[i],256,263);
+     symbolCtx.fillStyle='#202a34';
+     symbolCtx.fillText(SYMBOLS[i],256,263);
+     symbolCtx.lineWidth=5;
+     symbolCtx.strokeStyle='rgba(128,151,169,.42)';
+     symbolCtx.strokeText(SYMBOLS[i],252,257);
+     symbolCtx.fillStyle='rgba(15,22,29,.42)';
+     symbolCtx.fillText(SYMBOLS[i],260,268);
+   }else{
+     // Aluminum engraving on the unlit dark metal: inset shadow, silver floor,
+     // and a thin upper-edge glint (not a glowing decal).
+     symbolCtx.lineJoin='round';
+     symbolCtx.lineWidth=22;
+     symbolCtx.strokeStyle='rgba(3,8,13,.95)';
+     symbolCtx.strokeText(SYMBOLS[i],258,268);
+     symbolCtx.fillStyle='#788b99';
+     symbolCtx.fillText(SYMBOLS[i],256,263);
+     symbolCtx.lineWidth=5;
+     symbolCtx.strokeStyle='rgba(221,235,244,.88)';
+     symbolCtx.strokeText(SYMBOLS[i],252,257);
+     symbolCtx.fillStyle='rgba(177,194,205,.8)';
+     symbolCtx.fillText(SYMBOLS[i],252,257);
+   }
+ }
+ paintChevronSymbol(false);
+ const symbolTexture=new THREE.CanvasTexture(symbolCanvas);
+ symbolTexture.colorSpace=THREE.SRGBColorSpace;
+ symbolTexture.needsUpdate=true;
+ const symbolMaterial=new THREE.MeshBasicMaterial({
+   map:symbolTexture,transparent:true,side:THREE.DoubleSide,
+   depthWrite:false,depthTest:true,opacity:1
+ });
+ const symbolMesh=new THREE.Mesh(new THREE.PlaneGeometry(.46,.45),symbolMaterial);
+ symbolMesh.position.set(0,.025,.545);
+ // The engraved symbol belongs to the gate ring, not a HUD layer.
+ // Normal render order lets the robot in front of the gate occlude it.
+ symbolMesh.renderOrder=0;
+ symbolMesh.visible=true;
+ group.add(symbolMesh);
+
+ chevrons.push({
+   group,lit,symbolMesh,symbolTexture,paintChevronSymbol,index:i,angle:a,
+   baseRadius:rad,targetRadius:rad,currentRadius:rad,
+   glowMaterial
+ });
+});
+// Floor plane and yellow hazard bands
+const floor=box(room,24,.25,25,mat('#303640',.48,.65),0,-1.05,5.3);
+for(let s of [-1,1]){
+ const stripe=box(room,4,.03,.15,mat('#c49a45',.2,.55),s*6.4,-.91,1.1);stripe.rotation.y=s*.18;
+}
+// Bridge deck: trapezoidal mesh extends from gate plane toward viewer, with grated grid
+const bridgeGroup=new THREE.Group();bridgeGroup.position.set(0,4.06,1.15);bridgeGroup.rotation.x=.12;scene.add(bridgeGroup); // gently slopes down toward the room floor
+// Render layering: gate glyphs use order 6, bridge elements use order 10.
+// This keeps the symbols legible over the wheel hardware but behind the bridge.
+function setBridgeRenderOrder(root, order){
+ root.traverse(object=>{
+   if(object.isMesh || object.isLine || object.isLineSegments) object.renderOrder=order;
+ });
+}
+function trapezoid(wBack,wFront,length,z0,material){
+ const verts=[-wBack/2,0,z0, wBack/2,0,z0, wFront/2,0,z0+length, -wFront/2,0,z0+length];
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex([0,2,1,0,3,2]);geo.computeVertexNormals();
+ const mesh=new THREE.Mesh(geo,material);bridgeGroup.add(mesh);return mesh;
+}
+trapezoid(4.5,7.0,7.3,0,mat('#414c57',.8,.4));
+// deck edge rails
+for(const s of [-1,1]){
+ const back=[s*2.15,.22,0],front=[s*3.5,.22,7.3];
+ line(bridgeGroup,back,front,.095,brightSteel);
+ line(bridgeGroup,[s*2.15,.05,0],[s*3.5,.05,7.3],.06,darkSteel);
+ for(let k=0;k<=5;k++){const t=k/5,x=s*(2.15+(3.5-2.15)*t),z=7.3*t;line(bridgeGroup,[x,.04,z],[x,.68,z],.045,steel)}
+ // luminous guard panels, three segments
+ for(let k=0;k<3;k++){
+  const t=(k+.5)/3,x=s*(2.15+(3.5-2.15)*t),z=7.3*t;
+  const panel=box(bridgeGroup,1.12,.38,.07,brightSteel,x,.58,z);panel.rotation.y=s*.19;
+  const glow=new THREE.Mesh(new THREE.BoxGeometry(1.02,.23,.025),new THREE.MeshStandardMaterial({color:'#e8f3ff',emissive:'#b7d9ff',emissiveIntensity:1.5,roughness:.3}));
+  glow.position.set(x,.6,z+.045);glow.rotation.y=s*.19;bridgeGroup.add(glow);
+ }
+}
+// grating lines are placed in bridge coordinates and follow perspective width
+for(let i=0;i<=25;i++){
+ const t=i/25,z=7.3*t,w=4.5+(7-4.5)*t;
+ line(bridgeGroup,[-w/2,.018,z],[w/2,.018,z],.018,steel);
+}
+for(let i=0;i<=26;i++){
+ const t=i/26,xBack=-2.25+4.5*t,xFront=-3.5+7*t;
+ line(bridgeGroup,[xBack,.025,0],[xFront,.025,7.3],.014,brightSteel);
+}
+// Foreground landing and a realistic descending grated stair flight.
+// The bridge deck is raised to the lower edge of the vortex aperture.
+// A separate stair flight descends from the elevated deck toward the room floor;
+// the bridge itself must never be dropped to floor level.
+const stairCount=10, stairStartZ=7.45, stairRun=.48, stairRise=.50;
+for(let j=0;j<stairCount;j++){
+ const z=stairStartZ+j*stairRun;
+ const y=-j*stairRise-.16;
+ const w=7.0+j*.12;
+ // Structural tread tray and dark underside
+ box(bridgeGroup,w,.16,.52,steel,0,y,z);
+ box(bridgeGroup,w-.16,.07,.43,darkSteel,0,y+.095,z);
+ // Fine transverse grating bars, with a subtle longitudinal frame
+ for(let i=0;i<25;i++){
+   const x=-w/2+.14+i*(w-.28)/24;
+   box(bridgeGroup,.025,.025,.39,brightSteel,x,y+.14,z);
+ }
+ line(bridgeGroup,[-w/2,y+.02,z-.22],[w/2,y+.02,z-.22],.035,brightSteel);
+}
+// Sloped stair stringers and side handrails descending to the floor
+for(const side of [-1,1]){
+ line(bridgeGroup,[side*3.48,.18,7.28],[side*3.95,-4.35,12.25],.16,darkSteel);
+ line(bridgeGroup,[side*3.50,.62,7.28],[side*3.97,-3.92,12.25],.075,brightSteel);
+ for(let j=0;j<=10;j++){
+   const t=j/10;
+   const x=side*(3.5+.47*t),z=7.28+4.97*t,y=.52-4.54*t;
+   line(bridgeGroup,[x,y-.42,z],[x,y+.10,z],.045,steel);
+ }
+ // diagonal support beams under the elevated walkway
+ line(bridgeGroup,[side*2.25,-.05,.15],[side*3.82,-3.9,10.6],.13,darkSteel);
+ line(bridgeGroup,[side*2.32,.02,.15],[side*3.88,-3.82,10.6],.045,brightSteel);
+}
+
+// Room equipment: brackets, conduit loops, wall fixtures
+for(const s of [-1,1]){
+ const x=s*5.4;
+ box(room,.95,1.25,.4,darkSteel,x,7.2,-1.7);
+ box(room,.62,.78,.44,steel,x,7.2,-1.4);
+ for(let k=0;k<4;k++)line(room,[s*4.8,8.5+k*.08,-2.2],[s*6.4,9.6+k*.08,-3.1],.035,steel);
+ cyl(room,.13,.13,.7,amberDark,x,5.4,-1.1,Math.PI/2,0,0);
+}
+
+
+/* REFERENCE ROOM — rebuilt against the supplied photographic reference.
+   The room is a deep, dark industrial chamber: blackened steel wall bays,
+   concrete side returns, exposed pipe bundles, overhead fluorescents and a
+   warm, distant bulkhead. All scene detail is procedural Three.js geometry. */
+const concreteCanvas=document.createElement('canvas');
+concreteCanvas.width=512; concreteCanvas.height=512;
+const cctx=concreteCanvas.getContext('2d');
+cctx.fillStyle='#34363a';cctx.fillRect(0,0,512,512);
+for(let i=0;i<26000;i++){
+ const x=Math.random()*512,y=Math.random()*512;
+ const v=35+Math.random()*90,a=.025+Math.random()*.09;
+ cctx.fillStyle=`rgba(${v},${v},${v},${a})`;
+ cctx.fillRect(x,y,1+Math.random()*6,1+Math.random()*5);
+}
+for(let i=0;i<38;i++){
+ cctx.fillStyle=`rgba(7,9,12,${.04+Math.random()*.07})`;
+ cctx.fillRect(Math.random()*512,Math.random()*512,3+Math.random()*22,35+Math.random()*220);
+}
+const concreteTex=new THREE.CanvasTexture(concreteCanvas);
+concreteTex.wrapS=concreteTex.wrapT=THREE.RepeatWrapping;
+concreteTex.repeat.set(2.5,3.2);
+const concrete=new THREE.MeshStandardMaterial({map:concreteTex,color:'#8d8982',roughness:.97,metalness:.02});
+const concreteDark=mat('#292b2e',.1,.95), concreteLip=mat('#55575a',.2,.88);
+const wallSteel=mat('#10151b',.72,.58), wallPanel=mat('#1c222a',.68,.55);
+const wallRib=mat('#343b43',.8,.42), railMetal=mat('#66717b',.83,.34);
+const pipeMetal=mat('#3a424b',.8,.42), pipeHighlight=mat('#7c858c',.78,.34);
+const redClamp=mat('#762b2b',.75,.36), redEdge=mat('#a34a3b',.72,.32);
+const warmConcrete=mat('#51483e',.15,.96), warmTrim=mat('#766858',.22,.86);
+const recess=mat('#080b10',.3,.8), fixtureGlass=new THREE.MeshStandardMaterial({color:'#dce6ed',emissive:'#a8c5dc',emissiveIntensity:1.35,roughness:.28});
+
+/* Side walls: tall industrial bays and concrete returns, angled visually into depth. */
+for(const side of [-1,1]){
+ const sx=side*6.15;
+ // Massive wall mass with a darker inset face and concrete edge returns.
+ box(room,.62,13.2,23,concrete,sx,5.85,-1.65);
+ box(room,.18,12.2,22.4,wallSteel,side*5.82,5.8,-1.55);
+ for(let z=-10.1;z<=6.1;z+=3.15){
+   box(room,.28,12.55,.25,wallRib,side*5.67,5.85,z-1.48);
+   box(room,.24,12.55,.24,wallRib,side*5.67,5.85,z+1.48);
+   box(room,.22,.25,3.08,railMetal,side*5.66,1.05,z);
+   box(room,.20,.20,3.08,wallRib,side*5.66,10.75,z);
+   // recessed rectangular wall fields with subtly mottled concrete face
+   box(room,.06,9.8,2.48,recess,side*5.58,5.8,z);
+   box(room,.075,9.55,2.28,wallPanel,side*5.52,5.8,z);
+   box(room,.045,9.25,2.12,concrete,side*5.47,5.8,z);
+   box(room,.12,.10,2.5,wallRib,side*5.42,1.15,z);
+   box(room,.12,.10,2.5,wallRib,side*5.42,10.35,z);
+ }
+ // Repeating tall pipe banks, with metal collars and lower elbows.
+ for(let n=0;n<5;n++){
+   const px=side*(5.02+n*.18);
+   line(room,[px,.2,-10.6],[px,11.65,6.8],n===0?.075:.045,pipeMetal);
+   line(room,[px+.035,1.1,-9.8],[px+.035,10.8,5.8],.018,pipeHighlight);
+   for(const z of [-8.8,-5.6,-2.4,.8,4.0,6.0]){
+     box(room,.22,.14,.28,railMetal,side*4.85,2.0,z);
+     box(room,.22,.14,.28,railMetal,side*4.85,9.25,z);
+   }
+ }
+ // Utility boxes, conduit runs and compact wall lights.
+ for(const z of [-6.1,-1.1,4.3]){
+   box(room,.48,1.12,.78,wallSteel,side*5.0,4.25,z);
+   box(room,.10,.82,.55,railMetal,side*4.76,4.25,z);
+   box(room,.08,.18,.25,redClamp,side*4.68,4.52,z);
+   line(room,[side*4.8,4.8,z-.2],[side*4.68,5.35,z-.48],.03,pipeMetal);
+ }
+ box(room,.20,.68,.42,wallSteel,side*4.9,7.55,-.35);
+ box(room,.08,.42,.22,fixtureGlass,side*4.78,7.55,-.35);
+ const sideLamp=new THREE.PointLight(0xc7d7e6,1.6,4.2);
+ sideLamp.position.set(side*4.45,7.45,-.35);scene.add(sideLamp);
+ // Floor-mounted support legs and exposed diagonal hydraulic lines.
+ box(room,.85,2.1,.8,wallSteel,side*4.55,2.25,-1.45);
+ box(room,.42,1.35,.58,redClamp,side*4.35,2.75,-1.15);
+ line(room,[side*4.65,3.65,-1.75],[side*3.85,5.25,-3.0],.09,pipeMetal);
+ line(room,[side*4.55,2.0,-1.0],[side*3.95,.45,-.25],.10,pipeMetal);
+ line(room,[side*4.62,3.6,-1.72],[side*3.82,5.2,-2.96],.035,pipeHighlight);
+ line(room,[side*5.1,8.9,-3.5],[side*4.45,6.95,-1.65],.065,pipeMetal);
+ box(room,.7,.22,.65,wallSteel,side*4.85,.12,-.9);
+}
+
+/* The wall directly behind the inactive gate: deep black industrial bays,
+   with a large distant service bulkhead and a restrained warm practical light. */
+box(room,18.2,13.2,.65,warmConcrete,0,6.15,-12.4);
+box(room,17.6,12.7,.25,wallSteel,0,6.15,-12.02);
+for(let x=-8.0;x<=8.0;x+=2.0){
+ box(room,.22,12.3,.34,wallRib,x,6.15,-11.82);
+ box(room,.09,11.6,.12,recess,x+.19,6.15,-11.62);
+}
+for(const y of [1.0,3.15,5.3,7.5,9.7,11.25]){
+ box(room,17.6,.20,.34,wallRib,0,y,-11.8);
+ box(room,17.0,.055,.12,warmTrim,0,y+.14,-11.58);
+}
+box(room,6.8,8.3,.20,concreteDark,0,6.1,-11.65);
+box(room,6.35,7.9,.10,warmConcrete,0,6.1,-11.5);
+for(const x of [-3.0,-1.5,0,1.5,3.0]){
+ box(room,.09,7.6,.12,warmTrim,x,6.1,-11.39);
+}
+for(const y of [2.2,4.1,6.2,8.0,9.7]){
+ box(room,6.2,.08,.10,wallRib,0,y,-11.38);
+}
+for(const x of [-1.0,1.0]){
+ box(room,.10,.62,.10,wallSteel,x,6.25,-11.30);
+ box(room,.055,.34,.06,warmTrim,x,6.25,-11.25);
+}
+box(room,.26,.48,.10,wallSteel,-3.25,6.55,-11.3);
+box(room,.10,.23,.06,fixtureGlass,-3.25,6.55,-11.24);
+const rearPractical=new THREE.PointLight(0xffc58a,.55,3.5);
+rearPractical.position.set(-3.25,6.55,-10.8);scene.add(rearPractical);
+
+/* Overhead gantry, dark cross beams and the two white fluorescent fixtures
+   visible in the reference photograph. */
+for(let z=-10.4;z<=5.4;z+=2.7){
+ box(room,13.1,.30,.48,wallSteel,0,11.85,z);
+ box(room,.22,.32,11.8,wallRib,-6.25,11.55,z);
+ box(room,.22,.32,11.8,wallRib,6.25,11.55,z);
+}
+for(const x of [-3.35,3.35]){
+ box(room,1.22,.20,2.30,wallSteel,x,11.25,-2.55);
+ box(room,1.02,.07,2.05,railMetal,x,11.14,-2.55);
+ box(room,.82,.045,1.86,fixtureGlass,x,11.08,-2.55);
+ const overhead=new THREE.PointLight(0xdce8f2,6.5,7.5);
+ overhead.position.set(x,10.65,-2.15);scene.add(overhead);
+}
+// Center ceiling exhaust/duct housing and ribbed cylindrical nozzle.
+cyl(room,.42,.48,.85,wallSteel,0,12.0,-2.7,Math.PI/2,0,0,24);
+cyl(room,.31,.35,.42,pipeMetal,0,11.85,-2.7,Math.PI/2,0,0,24);
+for(let i=0;i<7;i++)cyl(room,.36,.36,.035,railMetal,0,11.85,-3.02+i*.09,Math.PI/2,0,0,24);
+
+/* Concrete floor shoulders and small yellow-black safety markings at the room edge. */
+for(const side of [-1,1]){
+ box(room,1.25,.16,18.5,concreteDark,side*5.18,-.88,1.0);
+ for(let z=-7.8;z<=5.2;z+=2.2){
+   const stripe=box(room,.72,.035,.15,mat('#b59a5d',.08,.8),side*5.02,-.78,z);
+   stripe.rotation.y=side*.08;
+ }
+ box(room,1.0,.24,1.35,wallSteel,side*4.72,-.72,-1.6);
+}
+
+// Bridge foreground layer: deck, rails, grating and its attached elements
+// are drawn after the wheel glyph overlay, so they occlude it naturally.
+setBridgeRenderOrder(bridgeGroup,10);
+
+/* Stargate attachment brackets / suspension clamps: red mechanical mounts at
+   four lateral points around the ring, visibly bolted to the gate housing. */
+const hookMaterial=redClamp, hookHighlight=redEdge;
+const supportIndicatorMaterials=[];
+const supportClampGroups=[];
+for(const side of [-1,1]){
+ for(const yy of [-1.48,1.48]){
+   const mount=new THREE.Group();
+   // Preserve the upper brackets exactly. The side chevrons sit at the
+   // angular midpoint between the upper and lower brackets (±28 degrees),
+   // so the angular gaps are equal on both sides of each chevron.
+   // Keep the lower brackets on the same gate-ring radius and mirror their
+   // orientation. Bring them forward in depth, ahead of the bridge deck,
+   // so the walkway cannot visually cover the lower red clamp assemblies.
+   if(yy>0){
+     mount.position.set(side*2.78,yy,.72);
+     mount.rotation.z=side*.52;
+   }else{
+     mount.position.set(side*2.78,-1.48,.72);
+     mount.rotation.z=-side*.52;
+   }
+   gate.add(mount);
+   supportClampGroups.push(mount);
+   // backing plate and paired cheeks
+   const plate=box(mount,.66,.82,.20,hookMaterial,0,0,0);
+   box(mount,.50,.66,.12,wallSteel,0,0,.13);
+   box(mount,.13,.72,.18,hookHighlight,-.25,0,.22);
+   box(mount,.13,.72,.18,hookHighlight,.25,0,.22);
+   // upper/lower clamp lips grasping the ring
+   box(mount,.72,.16,.30,railMetal,0,.36,.23);
+   box(mount,.72,.16,.30,railMetal,0,-.36,.23);
+   const indicator=box(mount,.48,.42,.14,redClamp,0,0,.28);
+   indicator.material=redClamp.clone();
+   supportIndicatorMaterials.push(indicator.material);
+   // exposed pivot pin and small fasteners
+   cyl(mount,.10,.10,.16,railMetal,0,.43,.31,Math.PI/2,0,0,16);
+   for(const fx of [-.19,.19])for(const fy of [-.25,.25])
+     cyl(mount,.035,.035,.035,railMetal,fx,fy,.31,Math.PI/2,0,0,10);
+   // hydraulic strut running from bracket toward the wall-side frame
+   line(mount,[side*.26,-.42,-.02],[side*.60,-.88,-.18],.075,pipeMetal);
+   line(mount,[side*.29,-.45,.04],[side*.63,-.91,-.12],.025,railMetal);
+ }
+}
+/* Console dialing: each of the first five selections rotates the inner ring
+   so the chosen glyph aligns with the next physical chevron. */
+const ADDRESS=SYMBOLS.slice(0,5);
+const entered=[];
+const selectedChevronIndices=[];
+const slotsEl=document.querySelector('#slots');
+const keysEl=document.querySelector('#keys'),statusEl=document.querySelector('#status'),messageEl=document.querySelector('#message');
+const engageBtn=document.querySelector('#engage'),clearBtn=document.querySelector('#clear');
+const keyButtons=[],slotEls=[];
+for(let i=0;i<ADDRESS.length;i++){
+ const slot=document.createElement('div');
+ slot.className='slot';slot.id='slot'+i;slot.textContent='·';
+ slotsEl.appendChild(slot);slotEls.push(slot);
+}
+let isOpen=false, isDialing=false, turnIndex=0, pendingChevronIndex=-1, pendingSymbol='', vortexMaterialRef=null, waterJet=null, waterJetStart=0;
+const TURN_DURATION=2000;
+const TWO_PI=Math.PI*2;
+function renderConsole(){
+ const visibleEntry=[...entered];
+ if(pendingSymbol)visibleEntry.push(pendingSymbol);
+ for(let i=0;i<slotEls.length;i++){
+   slotEls[i].textContent=visibleEntry[i]||'·';
+   slotEls[i].classList.toggle('full',!!visibleEntry[i]);
+ }
+ keyButtons.forEach((b,i)=>b.classList.toggle('picked',entered.includes(SYMBOLS[i])||pendingSymbol===SYMBOLS[i]));
+ // The symbol itself identifies the physical chevron, regardless of its
+ // position in the dialing sequence. Keep it lit while rotating, then lock it.
+ chevrons.forEach((c,i)=>{
+   const locked=selectedChevronIndices.includes(i);
+   const dialingChevronMap=[7,8,0,1,2];
+   const active=locked||(pendingChevronIndex>=0&&i===dialingChevronMap[pendingChevronIndex]);
+   // The chevron lights immediately on key press. Its inward slide/lock only
+   // happens after the inner ring has completed the full alternating turn.
+   c.lit.visible=active;
+   // The gate chevrons are now plain, unmarked plates; console glyphs remain.
+   c.symbolMesh.visible=false;
+   c.paintChevronSymbol(active);
+   c.symbolTexture.needsUpdate=true;
+   c.symbolMesh.material.opacity=1;
+   c.targetRadius=locked?2.58:c.baseRadius;
+   c.glowMaterial.emissiveIntensity=active?4.2:3.6;
+ });
+ 
+ if(typeof updateRedButtonLight==='function') updateRedButtonLight();
+}
+function setControlsDisabled(disabled){
+ keyButtons.forEach(b=>b.disabled=disabled||isOpen);
+ clearBtn.disabled=disabled;
+ 
+}
+function rotateRingTo(targetAngle,direction,duration=TURN_DURATION){
+ return new Promise(resolve=>{
+   const start=performance.now();
+   const initial=innerRing.rotation.z;
+   // Direction is explicit: -1 = anti-clockwise, +1 = clockwise.
+   // Travel at least one full revolution, then stop on the exact target angle.
+   let delta;
+   if(direction<0){
+     delta=-(((initial-targetAngle)%TWO_PI+TWO_PI)%TWO_PI);
+     if(Math.abs(delta)<1e-8)delta=0;
+     delta-=TWO_PI;
+   }else{
+     delta=(((targetAngle-initial)%TWO_PI+TWO_PI)%TWO_PI);
+     if(Math.abs(delta)<1e-8)delta=0;
+     delta+=TWO_PI;
+   }
+   const travelDuration=Math.max(duration,Math.abs(delta)/TWO_PI*duration);
+   const exactTarget=initial+delta;
+   function frame(now){
+     const progress=Math.min((now-start)/travelDuration,1);
+     const eased=progress*progress*(3-2*progress);
+     innerRing.rotation.z=progress===1?exactTarget:initial+delta*eased;
+     if(progress<1)requestAnimationFrame(frame); else resolve();
+   }
+   requestAnimationFrame(frame);
+ });
+}
+async function dialSymbol(symbol){
+ if(isOpen||isDialing||entered.length>=5)return;
+ if(entered.includes(symbol))return;
+ const nextIndex=entered.length;
+ const symbolIndex=SYMBOLS.indexOf(symbol);
+ if(symbolIndex<0)return;
+ isDialing=true;
+ setControlsDisabled(true);
+ pendingChevronIndex=nextIndex;
+ pendingSymbol=symbol;
+ statusEl.textContent=`CHEVRON ${nextIndex+1} / 5 EN COURS`;
+ statusEl.style.color='#ffbd69';
+ messageEl.textContent=`Alignement du symbole sur le chevron ${nextIndex+1}…`;
+ renderConsole();
+
+ // The five active chevrons are mapped to their actual geometric angles.
+ // Their nose points toward the aperture, and the gate glyphs are distributed
+ // clockwise from the top. Derive the target from the real chevron coordinates
+ // rather than the previous approximate hard-coded angles.
+ const physicalChevronMap=[7,8,0,1,2];
+ const symbolAngle=Math.PI/2-symbolIndex*TWO_PI/SYMBOLS.length;
+ const chevronAngleDegrees=[
+   90,50,
+   2*Math.atan2(1.48,2.78)*180/Math.PI-50,
+   -30,-70,-110,-150,
+   2*(180-Math.atan2(1.48,2.78)*180/Math.PI)-130,
+   130
+ ];
+ const targetAngle=chevronAngleDegrees[physicalChevronMap[nextIndex]]*Math.PI/180;
+ const targetRotation=targetAngle-symbolAngle;
+ // Alternate direction by entry number: 1st CCW, 2nd CW, etc.
+ const direction=(nextIndex%2===0)?-1:1;
+ await rotateRingTo(targetRotation,direction);
+
+ entered.push(symbol);
+ selectedChevronIndices.push(physicalChevronMap[nextIndex]);
+ pendingChevronIndex=-1;
+ pendingSymbol='';
+ isDialing=false;
+ renderConsole();
+ statusEl.textContent=`CHEVRON ${entered.length} / 5 ENCLENCHÉ`;
+ statusEl.style.color='#ffbd69';
+ messageEl.textContent=entered.length===5
+   ?'Les cinq chevrons sont activés. Appuie sur le bouton rouge pour ouvrir la porte.'
+   :'Chevron verrouillé. Sélectionne le symbole suivant.';
+ setControlsDisabled(false);
+}
+
+SYMBOLS.forEach(symbol=>{
+ const button=document.createElement('button');
+ button.className='key';button.type='button';button.textContent=symbol;
+ const angle=(-Math.PI/2)+(SYMBOLS.indexOf(symbol)*TWO_PI/SYMBOLS.length);
+ const radius=36;
+ button.style.left=(50+Math.cos(angle)*radius)+'%';
+ button.style.top=(50+Math.sin(angle)*radius)+'%';
+ button.setAttribute('aria-label','Symbole '+symbol);
+ button.addEventListener('click',()=>dialSymbol(symbol));
+ keysEl.appendChild(button);keyButtons.push(button);
+});
+let resetTapCount=0;
+let resetTapTimer=null;
+let resetArmedTimer=null;
+function resetHasPriority(){ return engageBtn.classList.contains('reset-yellow'); }
+function updateRedButtonLight(){
+  // Five engaged chevrons keep the button lit regardless of the RESET sequence.
+  const fiveChevronsLocked=entered.length===5;
+  const resetWindowOpen=resetTapCount===3 && resetArmedTimer!==null;
+  engageBtn.classList.toggle('reset-yellow',resetWindowOpen);
+  engageBtn.classList.toggle('red-lit',fiveChevronsLocked&&!resetWindowOpen);
+  // Keep the central control clickable while the yellow RESET confirmation is armed,
+  // even when fewer than five address symbols are entered.
+  
+}
+function clearResetSequence(){
+  resetTapCount=0;
+  clearTimeout(resetTapTimer); resetTapTimer=null;
+  clearTimeout(resetArmedTimer); resetArmedTimer=null;
+  clearBtn.classList.remove('armed');
+  updateRedButtonLight();
+}
+clearBtn.addEventListener('click',()=>{
+  if(isDialing || engageSequenceRunning) return;
+  resetTapCount++;
+  clearBtn.classList.add('armed');
+  clearTimeout(resetTapTimer);
+  resetTapTimer=null;
+
+  // A fourth RESET tap (or more) explicitly aborts the procedure.
+  if(resetTapCount>=4){
+    clearResetSequence();
+    messageEl.textContent='RESET annulé : quatre appuis ou plus. Le bouton rouge reste éteint sauf si les cinq chevrons sont enclenchés.';
+    return;
+  }
+
+  if(resetTapCount===3){
+    clearTimeout(resetArmedTimer);
+    resetArmedTimer=setTimeout(()=>{
+      clearResetSequence();
+      messageEl.textContent='RESET expiré. Appuie trois fois sur RESET, puis sur le bouton rouge dans les 5 secondes.';
+    },5000);
+    updateRedButtonLight();
+    messageEl.textContent='RESET armé : appuie sur le bouton rouge dans les 5 secondes pour restaurer la porte et la pièce.';
+  }else{
+    // Taps 1 and 2 do not illuminate the red control. Reset their count
+    // after the 5-second inactivity window.
+    resetTapTimer=setTimeout(()=>{
+      resetTapCount=0;
+      resetTapTimer=null;
+      clearBtn.classList.remove('armed');
+      updateRedButtonLight();
+      messageEl.textContent='Séquence RESET annulée : recommence avec trois appuis sur RESET.';
+    },5000);
+    updateRedButtonLight();
+    messageEl.textContent=`RESET : ${resetTapCount}/3 appuis. Appuie encore ${3-resetTapCount} fois.`;
+  }
+});
+
+/* WALL ALPHANUMERIC TEAM DISPLAY — mounted on the wall behind the Stargate.
+   It is activated from the actual five-symbol code entered on the console,
+   never from the URL team parameter. */
+let teamWallDisplay=null;
+let teamWallDisplayTexture=null;
+function createTeamWallDisplay(){
+  if(teamWallDisplay) return teamWallDisplay;
+  const displayGroup=new THREE.Group();
+  // Wall-facing screen is set well behind the gate plane, visible through the aperture.
+  displayGroup.position.set(0,6.58,-3.15);
+  // Slightly smaller and higher so the complete panel stays inside the visible
+  // Stargate aperture from the players' viewing position.
+  displayGroup.scale.setScalar(0.88);
+  const housing=new THREE.Mesh(
+    new THREE.BoxGeometry(5.85,1.72,.20),
+    new THREE.MeshStandardMaterial({color:0x090b0e,metalness:.82,roughness:.26})
+  );
+  displayGroup.add(housing);
+  const bezel=new THREE.Mesh(
+    new THREE.BoxGeometry(5.67,1.56,.045),
+    new THREE.MeshStandardMaterial({color:0x1a1113,metalness:.68,roughness:.3})
+  );
+  bezel.position.z=.118;displayGroup.add(bezel);
+  const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=300;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#020a12';ctx.fillRect(0,0,1024,300);
+  const texture=new THREE.CanvasTexture(canvas);
+  texture.colorSpace=THREE.SRGBColorSpace;
+  teamWallDisplayTexture=texture;
+  const screen=new THREE.Mesh(
+    new THREE.PlaneGeometry(5.52,1.42),
+    new THREE.MeshBasicMaterial({map:texture,transparent:false,side:THREE.DoubleSide})
+  );
+  screen.position.z=.148;screen.renderOrder=3;displayGroup.add(screen);
+  // A thin cyan edge light makes the panel read as a physical alphanumeric terminal.
+  const edgeMat=new THREE.MeshBasicMaterial({color:0x7a1714});
+  for(const [w,h,x,y] of [[5.58,.025,0,.735],[5.58,.025,0,-.735],[.025,1.48,-2.79,0],[.025,1.48,2.79,0]]){
+    const edge=new THREE.Mesh(new THREE.BoxGeometry(w,h,.018),edgeMat);
+    edge.position.set(x,y,.16);displayGroup.add(edge);
+  }
+  // Keep the physical terminal visible even before a team code is entered.
+  // Its standby label is drawn immediately; the team label updates on validation.
+  displayGroup.visible=true;
+  scene.add(displayGroup);
+  teamWallDisplay=displayGroup;
+  return displayGroup;
+}
+let activeDisplayedTeam=null;
+const LED_DISPLAY_STYLE={
+  // One shared LED color and luminance for both rows and every game mode.
+  color:'#ff321f',
+  glow:'#ff321f',
+  unlit:'#260909',
+  glowBlur:4
+};
+
+// True 5x7 dot glyphs: the same individual LED dots are used for both rows.
+// This avoids anti-alias sampling artifacts that made the date appear broken
+// and caused the apparent brightness mismatch.
+const LED_GLYPHS={
+  '0':['01110','10001','10011','10101','11001','10001','01110'],
+  '1':['00100','01100','00100','00100','00100','00100','01110'],
+  '2':['01110','10001','00001','00010','00100','01000','11111'],
+  '3':['11110','00001','00001','01110','00001','00001','11110'],
+  '4':['00010','00110','01010','10010','11111','00010','00010'],
+  '5':['11111','10000','10000','11110','00001','00001','11110'],
+  '6':['01110','10000','10000','11110','10001','10001','01110'],
+  '7':['11111','00001','00010','00100','01000','01000','01000'],
+  '8':['01110','10001','10001','01110','10001','10001','01110'],
+  '9':['01110','10001','10001','01111','00001','00001','01110'],
+  'A':['01110','10001','10001','11111','10001','10001','10001'],
+  'B':['11110','10001','10001','11110','10001','10001','11110'],
+  'C':['01111','10000','10000','10000','10000','10000','01111'],
+  'D':['11110','10001','10001','10001','10001','10001','11110'],
+  'E':['11111','10000','10000','11110','10000','10000','11111'],
+  'F':['11111','10000','10000','11110','10000','10000','10000'],
+  'G':['01111','10000','10000','10111','10001','10001','01111'],
+  'H':['10001','10001','10001','11111','10001','10001','10001'],
+  'I':['01110','00100','00100','00100','00100','00100','01110'],
+  'J':['00111','00010','00010','00010','10010','10010','01100'],
+  'K':['10001','10010','10100','11000','10100','10010','10001'],
+  'L':['10000','10000','10000','10000','10000','10000','11111'],
+  'M':['10001','11011','10101','10101','10001','10001','10001'],
+  'N':['10001','11001','10101','10011','10001','10001','10001'],
+  'O':['01110','10001','10001','10001','10001','10001','01110'],
+  'P':['11110','10001','10001','11110','10000','10000','10000'],
+  'Q':['01110','10001','10001','10001','10101','10010','01101'],
+  'R':['11110','10001','10001','11110','10100','10010','10001'],
+  'S':['01111','10000','10000','01110','00001','00001','11110'],
+  'T':['11111','00100','00100','00100','00100','00100','00100'],
+  'U':['10001','10001','10001','10001','10001','10001','01110'],
+  'V':['10001','10001','10001','10001','10001','01010','00100'],
+  'W':['10001','10001','10001','10101','10101','11011','10001'],
+  'X':['10001','10001','01010','00100','01010','10001','10001'],
+  'Y':['10001','10001','01010','00100','00100','00100','00100'],
+  'Z':['11111','00001','00010','00100','01000','10000','11111'],
+  '/':['00001','00010','00010','00100','01000','01000','10000'],
+  ':':['00000','00100','00100','00000','00100','00100','00000'],
+  '-':['00000','00000','00000','11111','00000','00000','00000'],
+  ' ':['00000','00000','00000','00000','00000','00000','00000']
+};
+
+function drawLedText(ctx, canvas, text, centerY){
+  const pitch=8.6;
+  const dotRadius=2.75;
+  const charStep=pitch*6; // five LED columns plus one blank column
+  const maxChars=19;      // date/time is always 19 characters
+  const textWidth=text.length*charStep-pitch;
+  const startX=(canvas.width-textWidth)/2;
+  const startY=centerY-(7*pitch)/2;
+
+  ctx.save();
+  ctx.shadowColor=LED_DISPLAY_STYLE.glow;
+  ctx.shadowBlur=LED_DISPLAY_STYLE.glowBlur;
+  ctx.fillStyle=LED_DISPLAY_STYLE.color;
+
+  for(let i=0;i<text.length;i++){
+    const glyph=LED_GLYPHS[text[i]] || LED_GLYPHS[' '];
+    for(let row=0;row<7;row++){
+      for(let col=0;col<5;col++){
+        if(glyph[row][col]!=='1') continue;
+        const x=startX+i*charStep+col*pitch;
+        const y=startY+row*pitch;
+        ctx.beginPath();
+        ctx.arc(x,y,dotRadius,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+  ctx.restore();
+}
+function renderTeamWallDisplay(){
+  if(!teamWallDisplay || !teamWallDisplayTexture || activeDisplayedTeam===null) return;
+  const canvas=teamWallDisplayTexture.image;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#030202';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // A subtle, uniform dark-red point grid across the panel.
+  const pitch=8.6;
+  ctx.fillStyle=LED_DISPLAY_STYLE.unlit;
+  for(let y=16;y<canvas.height-16;y+=pitch){
+    for(let x=16;x<canvas.width-16;x+=pitch){
+      ctx.beginPath();
+      ctx.arc(x,y,2.05,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  const teamNumber=activeDisplayedTeam.startsWith('equipe')
+    ? activeDisplayedTeam.replace('equipe','')
+    : null;
+  const firstLine=teamNumber ? `EQUIPE ${teamNumber}` : 'MODE LIBRE';
+
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const dateTime=`${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+  // Same exact 5x7 glyphs, dot radius, hue, and glow on both lines.
+  // A fixed-width glyph grid keeps the date/time stationary as seconds tick.
+  drawLedText(ctx,canvas,firstLine,83);
+  drawLedText(ctx,canvas,dateTime,217);
+
+  ctx.strokeStyle='#3a2424';
+  ctx.lineWidth=5;
+  ctx.strokeRect(5,5,1014,290);
+  teamWallDisplayTexture.needsUpdate=true;
+}
+function showTeamWallDisplay(team){
+  const display=createTeamWallDisplay();
+  // A code belonging to no registered team is the free-play mode.
+  activeDisplayedTeam=team || 'libre';
+  display.visible=true;
+  renderTeamWallDisplay();
+}
+// Resolve the URL's team identifier through TEAM_URL_CODE_MAP / getConnectedTeam().
+// Display the resolved team immediately on page load, before any gate symbols are
+// entered. An absent or unrecognized URL code falls back to free-play mode.
+showTeamWallDisplay(CONNECTED_TEAM);
+
+// Keep the displayed team fixed while refreshing only the date/time each second.
+setInterval(renderTeamWallDisplay,1000);
+
+/* ROBOT ARRIVAL — deliberately separate from the locked gate/chevron mechanism.
+   The robot appears four seconds after the event horizon has fully opened,
+   then walks from the far side of the portal onto the bridge toward the viewer. */
+let arrivingRobot=null;
+let robotSelfDestructOnArrival=false;
+let robotSelfDestructTriggered=false;
+let destructionComplete=false;
+let destructionSceneSnapshot=[];
+let explosionSmokeObjects=[];
+let robotWalkStart=0;
+let robotWalkDuration=5.8;
+let robotWalkActive=false;
+const robotParts={};
+function createArrivingRobot(){
+  const robot=new THREE.Group();
+  // Friendly service-robot silhouette inspired by the supplied reference:
+  // pearl-white rounded shells, a dark rounded visor and simple luminous eyes.
+  const shell=new THREE.MeshStandardMaterial({color:0xf0f2f4,metalness:.16,roughness:.3});
+  const shellBright=new THREE.MeshStandardMaterial({color:0xffffff,metalness:.12,roughness:.24});
+  const joint=new THREE.MeshStandardMaterial({color:0x20242a,metalness:.42,roughness:.34});
+  const inset=new THREE.MeshStandardMaterial({color:0x11151b,metalness:.22,roughness:.25});
+  const eyeMat=new THREE.MeshStandardMaterial({color:0xeafaff,emissive:0xc5f4ff,emissiveIntensity:2.2,roughness:.18});
+  const torso=new THREE.Group();robot.add(torso);robotParts.torso=torso;
+
+  // Smooth tapered-looking torso with broad white shoulder/chest shells.
+  const body=new THREE.Mesh(new THREE.SphereGeometry(.47,32,24),shell);
+  body.scale.set(1.0,1.03,.57);body.position.y=1.38;torso.add(body);
+  const chestPlate=new THREE.Mesh(new THREE.SphereGeometry(.31,28,20),shellBright);
+  chestPlate.scale.set(1.28,.67,.34);chestPlate.position.set(0,1.61,.205);torso.add(chestPlate);
+  const chestSensor=new THREE.Mesh(new THREE.BoxGeometry(.24,.075,.035),inset);
+  chestSensor.position.set(0,1.58,.386);torso.add(chestSensor);
+  for(const side of [-1,1]){
+    const smallSensor=new THREE.Mesh(new THREE.SphereGeometry(.018,10,8),joint);
+    smallSensor.position.set(side*.19,1.31,.245);torso.add(smallSensor);
+  }
+
+  // Short neck and signature rounded black head/visor with two vertical eyes.
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.105,.13,.19,20),shell);
+  neck.position.y=1.91;torso.add(neck);
+  const head=new THREE.Group();head.position.set(0,2.13,.02);torso.add(head);
+  const headShell=new THREE.Mesh(new THREE.SphereGeometry(.32,32,24),shellBright);
+  headShell.scale.set(1.12,.79,.77);head.add(headShell);
+  const visor=new THREE.Mesh(new THREE.SphereGeometry(.275,32,24),inset);
+  visor.scale.set(1.06,.72,.82);visor.position.set(0,-.005,.105);head.add(visor);
+  for(const x of [-.115,.115]){
+    const eye=new THREE.Mesh(new THREE.CapsuleGeometry(.027,.09,5,12),eyeMat);
+    eye.position.set(x,.005,.315);head.add(eye);
+  }
+
+  // Articulated arms: rounded upper/lower shells over dark mechanical pivots.
+  const arms=[];
+  for(const side of [-1,1]){
+    const arm=new THREE.Group();arm.position.set(side*.49,1.68,0);torso.add(arm);arms.push(arm);
+    const shoulderJoint=new THREE.Mesh(new THREE.SphereGeometry(.16,24,18),joint);arm.add(shoulderJoint);
+    const shoulderShell=new THREE.Mesh(new THREE.SphereGeometry(.205,28,20),shellBright);
+    shoulderShell.scale.set(.92,1.0,.83);shoulderShell.position.set(side*.015,-.045,.015);arm.add(shoulderShell);
+    const upper=new THREE.Mesh(new THREE.CapsuleGeometry(.115,.29,6,16),shell);
+    upper.rotation.z=side*.045;upper.position.y=-.31;arm.add(upper);
+    const elbow=new THREE.Mesh(new THREE.SphereGeometry(.105,20,16),joint);elbow.position.y=-.55;arm.add(elbow);
+    const forearm=new THREE.Mesh(new THREE.CapsuleGeometry(.12,.31,6,16),shellBright);
+    forearm.position.y=-.77;arm.add(forearm);
+    const darkPanel=new THREE.Mesh(new THREE.SphereGeometry(.105,20,16),inset);
+    darkPanel.scale.set(.72,1.05,.25);darkPanel.position.set(0,-.79,.095);arm.add(darkPanel);
+    const wrist=new THREE.Mesh(new THREE.CylinderGeometry(.07,.075,.12,16),joint);
+    wrist.position.y=-.99;arm.add(wrist);
+    const palm=new THREE.Mesh(new THREE.SphereGeometry(.105,20,16),shell);
+    palm.scale.set(.8,.85,.75);palm.position.y=-1.08;arm.add(palm);
+    for(let finger=0;finger<3;finger++){
+      const claw=new THREE.Mesh(new THREE.CapsuleGeometry(.025,.075,4,10),joint);
+      claw.position.set((finger-1)*.045,-1.17,.045);arm.add(claw);
+    }
+  }
+  robotParts.arms=arms;
+
+  // Compact white pelvis and two cleanly articulated legs with rounded shells.
+  const pelvis=new THREE.Mesh(new THREE.SphereGeometry(.36,28,20),shellBright);
+  pelvis.scale.set(1.05,.68,.66);pelvis.position.y=.91;robot.add(pelvis);
+  const legs=[];
+  for(const side of [-1,1]){
+    const leg=new THREE.Group();leg.position.set(side*.205,.78,0);robot.add(leg);legs.push(leg);
+    const hip=new THREE.Mesh(new THREE.SphereGeometry(.145,22,18),joint);leg.add(hip);
+    const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(.145,.30,6,18),shellBright);
+    thigh.position.y=-.27;leg.add(thigh);
+    const knee=new THREE.Mesh(new THREE.SphereGeometry(.13,22,18),shell);knee.position.y=-.51;leg.add(knee);
+    const shin=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.37,6,18),shell);
+    shin.position.y=-.76;leg.add(shin);
+    const ankle=new THREE.Mesh(new THREE.CylinderGeometry(.075,.085,.10,16),joint);
+    ankle.position.y=-.98;leg.add(ankle);
+    const foot=new THREE.Mesh(new THREE.SphereGeometry(.19,24,16),shellBright);
+    foot.scale.set(1.12,.38,1.48);foot.position.set(0,-1.055,.105);leg.add(foot);
+    const sole=new THREE.Mesh(new THREE.BoxGeometry(.28,.035,.38),joint);
+    sole.position.set(0,-1.12,.11);leg.add(sole);
+  }
+  robotParts.legs=legs;
+
+  // Subtle rear equipment and soft studio-like highlights.
+  const backpack=new THREE.Mesh(new THREE.BoxGeometry(.34,.48,.20),joint);
+  backpack.position.set(0,1.42,-.27);torso.add(backpack);
+  const fill=new THREE.PointLight(0xe8f5ff,1.0,4.2,2);fill.position.set(0,1.55,1.0);robot.add(fill);
+  const rim=new THREE.PointLight(0xffffff,.8,3.4,2);rim.position.set(0,1.9,-.55);robot.add(rim);
+
+  robot.scale.setScalar(1.12);
+  robot.rotation.y=0; // facing the viewer / positive Z
+  // Start clearly behind the event horizon and walk through its plane onto the bridge.
+  robot.position.set(0,4.45,-3.15); // soles aligned with the elevated bridge deck
+  robot.visible=false;
+  scene.add(robot);
+  return robot;
+}
+function beginRobotArrival(){
+  if(arrivingRobot)return;
+  arrivingRobot=createArrivingRobot();
+  robotWalkStart=performance.now();
+  robotWalkActive=true;
+  arrivingRobot.visible=true;
+}
+function updateArrivingRobot(now){
+  if(!robotWalkActive||!arrivingRobot)return;
+  const elapsed=(now-robotWalkStart)/1000;
+  const progress=Math.min(elapsed/robotWalkDuration,1);
+  const eased=progress*progress*(3-2*progress);
+  // Walk forward from the Stargate threshold, staying centered on the bridge.
+  arrivingRobot.position.z=-3.15+8.0*eased;
+  // Keep the robot's soles at the actual bridge-deck height throughout arrival.
+  // The feet extend about 0.39 world units below the robot root after scaling.
+  // The deck is elevated at the gate (world z=1.15, y=4.06) and slopes
+  // gently downward toward the viewer. Do not start the robot high in the
+  // event horizon or interpolate from a floating portalRootY.
+  const bridgeZ=arrivingRobot.position.z;
+  const deckY=4.06-Math.max(0,bridgeZ-1.15)*Math.sin(.12);
+  const soleOffset=.39;
+  arrivingRobot.position.y=deckY+soleOffset;
+  const stride=Math.sin(elapsed*7.6)*(1-progress*.35);
+  robotParts.legs[0].rotation.x=stride*.62;
+  robotParts.legs[1].rotation.x=-stride*.62;
+  robotParts.arms[0].rotation.x=-stride*.40;
+  robotParts.arms[1].rotation.x=stride*.40;
+  robotParts.torso.position.y=Math.abs(Math.sin(elapsed*15.2))*.035*(1-progress*.4);
+  arrivingRobot.rotation.y=Math.sin(elapsed*1.2)*.025;
+  if(progress>=1){
+    robotWalkActive=false;
+    robotParts.legs.forEach(leg=>leg.rotation.x=0);
+    robotParts.arms.forEach(arm=>arm.rotation.x=0);
+    robotParts.torso.position.y=0;
+    // A mismatched official team code triggers the destruction scene: no hologram.
+    if(!robotSelfDestructOnArrival) showTeamHologram();
+    if(robotSelfDestructOnArrival && !robotSelfDestructTriggered){
+      robotSelfDestructTriggered=true;
+      void triggerRobotSelfDestruct();
+    }
+  }
+}
+async function triggerRobotSelfDestruct(){
+  if(!arrivingRobot) return;
+  // Three-second progressive red warning, then the full destruction sequence.
+  const recolor=[];
+  arrivingRobot.traverse(obj=>{
+    if(obj.isMesh && obj.material && obj.material.color) recolor.push(obj);
+  });
+  const redStart=performance.now();
+  await new Promise(resolve=>{
+    function redden(now){
+      const t=Math.min((now-redStart)/3000,1);
+      recolor.forEach(obj=>{
+        obj.material.color.lerpColors(new THREE.Color(0xf0f2f4),new THREE.Color(0xff0808),t);
+        if(obj.material.emissive){
+          obj.material.emissive.set(0xff0000);
+          obj.material.emissiveIntensity=1.8*t;
+        }
+      });
+      if(t<1) requestAnimationFrame(redden); else resolve();
+    }
+    requestAnimationFrame(redden);
+  });
+  await stageStargateDestruction();
+}
+function showTeamHologram(){
+  if(!arrivingRobot || arrivingRobot.userData.hologramShown) return;
+  arrivingRobot.userData.hologramShown=true;
+
+  // Hologram emitter: visible beam starts at the robot's upper torso/head
+  // and expands toward the floating message panel.
+  const beamMat=new THREE.MeshBasicMaterial({
+    color:0x45eaff, transparent:true, opacity:.30,
+    blending:THREE.AdditiveBlending, depthWrite:false,
+    side:THREE.DoubleSide
+  });
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(.055,.42,1.72,24,1,true),beamMat);
+  beam.position.set(0,2.48,.12);
+  beam.rotation.z=Math.PI;
+  arrivingRobot.add(beam);
+
+  const canvas=document.createElement('canvas');
+  canvas.width=1024; canvas.height=360;
+  const ctx=canvas.getContext('2d');
+  // Larger, less transparent panel and generous internal padding.
+  ctx.fillStyle='rgba(3,35,70,.82)';
+  ctx.fillRect(12,12,1000,336);
+  const grad=ctx.createLinearGradient(0,12,0,348);
+  grad.addColorStop(0,'rgba(80,235,255,.30)');
+  grad.addColorStop(.5,'rgba(20,130,210,.12)');
+  grad.addColorStop(1,'rgba(40,220,255,.28)');
+  ctx.fillStyle=grad; ctx.fillRect(12,12,1000,336);
+  ctx.strokeStyle='#78f5ff'; ctx.lineWidth=8;
+  ctx.shadowColor='#00eaff'; ctx.shadowBlur=28;
+  ctx.strokeRect(12,12,1000,336);
+  ctx.shadowBlur=0;
+  ctx.font='bold 58px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#e2ffff'; ctx.shadowColor='#00eaff'; ctx.shadowBlur=18;
+  const message = CONNECTED_TEAM === null
+    ? HISTORICAL_FACTS[Math.floor(Math.random() * HISTORICAL_FACTS.length)]
+    : (TEAM_HOLOGRAM_MESSAGES[CONNECTED_TEAM] || 'TRANSMISSION DE TEST');
+  // Wrap to preserve generous left/right margins inside the holographic frame.
+  const words=message.split(' '), lines=[]; let line='';
+  for(const word of words){
+    const test=line ? line+' '+word : word;
+    if(ctx.measureText(test).width>850 && line){lines.push(line);line=word;} else line=test;
+  }
+  if(line) lines.push(line);
+  const lineHeight=66, startY=180-(lines.length-1)*lineHeight/2;
+  lines.forEach((text,i)=>ctx.fillText(text,512,startY+i*lineHeight));
+  const texture=new THREE.CanvasTexture(canvas);
+  texture.needsUpdate=true;
+  const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,opacity:.96,side:THREE.DoubleSide,depthWrite:false});
+  const hologram=new THREE.Mesh(new THREE.PlaneGeometry(4.15,1.46),material);
+  hologram.position.set(0,3.72,.22);
+  arrivingRobot.add(hologram);
+  arrivingRobot.userData.hologramBeam=beam;
+  arrivingRobot.userData.hologramPanel=hologram;
+}
+
+function activateVortex(){
+   // Activate the event-horizon: a blue, turbulent vortex expands from the
+   // outer rim toward the centre over exactly one second, then remains visible.
+   const vortexUniforms={
+     uTime:{value:0},
+     uReveal:{value:0}
+   };
+   const vortexMaterial=new THREE.ShaderMaterial({
+     uniforms:vortexUniforms,
+     transparent:true,
+     depthWrite:false,
+     side:THREE.DoubleSide,
+     vertexShader:`
+       varying vec2 vUv;
+       void main(){
+         vUv=uv;
+         gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+       }
+     `,
+     fragmentShader:`
+       precision highp float;
+       varying vec2 vUv;
+       uniform float uTime;
+       uniform float uReveal;
+       void main(){
+         vec2 p=(vUv-0.5)*2.0;
+         float r=length(p);
+         float a=atan(p.y,p.x);
+         float t=uTime;
+         float swirl=a+2.7*r-0.42*t+sin(r*18.0-t*1.8)*0.12;
+         float n=sin(swirl*7.0+sin(r*23.0-t*2.0)*1.8)
+               +sin(p.x*19.0+p.y*13.0+t*1.5)*0.55
+               +sin(p.y*31.0-p.x*17.0-t*1.1)*0.35;
+         float turbulence=smoothstep(-0.15,1.15,n);
+         float rim=1.0-smoothstep(0.90,1.0,r);
+         float reveal=smoothstep(1.0-uReveal-0.035,1.0-uReveal+0.035,r);
+         vec3 deep=vec3(0.035,0.045,0.23);
+         vec3 blue=vec3(0.16,0.20,0.62);
+         vec3 icy=vec3(0.60,0.78,1.0);
+         vec3 col=mix(deep,blue,turbulence*0.75);
+         col=mix(col,icy,smoothstep(0.65,1.0,n)*0.42);
+         float flecks=pow(max(0.0,sin(swirl*13.0+n*4.0)),18.0);
+         col+=vec3(0.55,0.72,1.0)*flecks*0.55;
+         float alpha=(0.93*rim)*(0.82+0.18*turbulence)*reveal;
+         gl_FragColor=vec4(col,alpha);
+       }
+     `
+   });
+   vortexMaterialRef=vortexMaterial;
+   const vortex=new THREE.Mesh(new THREE.CircleGeometry(2.285,160),vortexMaterial);
+   vortex.position.z=.325;
+   gate.add(vortex);
+   const portalGlow=new THREE.PointLight(0x5baeff,0,9);
+   portalGlow.position.set(0,0,1.1);gate.add(portalGlow);
+   const t0=performance.now();
+   function openVortex(now){
+     const elapsed=Math.min((now-t0)/1000,1);
+     vortexUniforms.uReveal.value=elapsed;
+     portalGlow.intensity=38*elapsed;
+     if(elapsed<1){
+       requestAnimationFrame(openVortex);
+     }else{
+       // "Door open" is the completed one-second reveal; robot follows 4 s later.
+       setTimeout(beginRobotArrival,4000);
+     }
+   }
+   requestAnimationFrame(openVortex);
+
+   // 2.5-second, dense, non-uniform luminous water burst toward the player.
+   // Three translucent shells plus a turbulent shader create an irregular
+   // billowing jet rather than a smooth, uniform cone.
+   const jetGroup=new THREE.Group();
+   jetGroup.position.set(0,0,0.42);
+   gate.add(jetGroup);
+   const jetLayers=[];
+   const jetColors=[0xffffff,0xe3f6ff,0x9bdcff,0x55baff,0x2588ed,0x6dcaff];
+   const jetOpacities=[1.0,0.90,0.76,0.64,0.52,0.42];
+   // Broad mouth at the gate: about one third of the event-horizon diameter.
+   // More overlapping shells provide a dense, luminous water body, not a transparent cone.
+   for(let i=0;i<6;i++){
+     const geo=new THREE.CylinderGeometry(0.48+i*0.035,0.78+i*0.10,4.7,256,96,true);
+     const mat=new THREE.ShaderMaterial({
+       transparent:true,depthWrite:false,side:THREE.DoubleSide,
+       uniforms:{uTime:{value:0},uOpacity:{value:jetOpacities[i]},uColor:{value:new THREE.Color(jetColors[i])}},
+       vertexShader:`varying vec2 vUv; varying vec3 vPos; void main(){vUv=uv;vPos=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+       fragmentShader:`precision highp float; varying vec2 vUv; varying vec3 vPos; uniform float uTime; uniform float uOpacity; uniform vec3 uColor;
+         float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+         float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+         void main(){float t=uTime;vec2 q=vUv;float n=noise(q*vec2(8.,20.)+vec2(t*2.,-t*4.));n+=.45*noise(q*vec2(17.,34.)-t*3.);
+         // Organic, smoothly varying outline: avoid regular bands and sharp repeating stripes.
+         float edgeNoise=noise(vec2(q.x*9.0-t*0.35,q.y*5.0+t*0.18));
+         float edge=(edgeNoise-.5)*.34
+                   +sin(q.x*10.5+t*.55)*.045
+                   +sin(q.x*23.0-t*.7)*.022;
+         float crestNoise=noise(vec2(q.x*7.0+t*.22,4.0+t*.3));
+         float topBreak=(crestNoise-.5)*.26+sin(q.x*8.0+t*.4)*.035;
+         float width=smoothstep(0.0,.055,q.y)*(1.0-smoothstep(.78+topBreak,1.0,q.y));
+         float sides=1.0-smoothstep(.18+edge,.49+edge,abs(q.x-.5));
+         float body=noise(q*vec2(5.2,8.0)+vec2(t*.20,-t*.38));
+         body=.55*body+.30*noise(q*vec2(10.0,15.0)+vec2(-t*.3,t*.5))+.15*n;
+         float luminousVeins=smoothstep(.56,.82,noise(q*vec2(18.0,23.0)+vec2(-t*.7,t*1.0)));
+         float foamNoise=noise(q*vec2(36.0,29.0)+vec2(t*.75,-t*1.25));
+         float foam=smoothstep(.66,.91,foamNoise)*smoothstep(.22,.72,body);
+         float alpha=uOpacity*width*sides*(.84+body*.26);
+         alpha=clamp(alpha+foam*.24+luminousVeins*.12,0.0,1.0);
+         vec3 col=mix(uColor,vec3(.40,.78,1.0),body*.26);
+         col+=vec3(.94,.985,1.0)*pow(body,1.45)*1.05;
+         col+=vec3(.68,.88,1.0)*(foam*.72+luminousVeins*.42);
+         gl_FragColor=vec4(col,alpha);}`
+     });
+     const shell=new THREE.Mesh(geo,mat);
+     shell.rotation.x=-Math.PI/2;
+     shell.position.z=i*.035;
+     jetGroup.add(shell);jetLayers.push(shell);
+   }
+   // Rounded, billowing front: overlapping ellipsoids soften the former pointed tip.
+   // The cap sits at the forward end of the burst and scales with the whole jet.
+   const capPalette=[0xffffff,0xdff5ff,0x8ccfff];
+   const capAlpha=[0.92,0.72,0.48];
+   for(let i=0;i<3;i++){
+     const cap=new THREE.Mesh(
+       new THREE.SphereGeometry(1,64,48),
+       new THREE.MeshBasicMaterial({color:capPalette[i],transparent:true,opacity:capAlpha[i],depthWrite:false,blending:THREE.AdditiveBlending})
+     );
+     cap.scale.set(0.72+i*0.17,0.70+i*0.14,0.62+i*0.12);
+     cap.position.set((i-1)*0.035,0,2.13+i*0.10);
+     jetGroup.add(cap);jetLayers.push(cap);
+   }
+   waterJet=jetGroup;
+   waterJetStart=performance.now()+1000; // wait until the vortex is fully open
+   waterJet.scale.set(.025,.025,.025);
+   waterJet.visible=false;
+
+}
+let engageSequenceRunning=false;
+const originalChevronMaterials=chevrons.map(c=>({
+  face:c.lit.material,
+  glow:c.glowMaterial
+}));
+
+function setSupportIndicatorColor(color, intensity){
+  // Only the inset indicators on the four attachment brackets change color.
+  // Use the requested hue directly (blue at engagement, vivid red after a
+  // rejected address) and disable tone mapping to preserve its saturation.
+  supportIndicatorMaterials.forEach(material=>{
+    const active=intensity>0;
+    material.color.set(active?color:0x681b16);
+    material.emissive.set(active?color:0x000000);
+    material.emissiveIntensity=active?intensity:0;
+    material.toneMapped=false;
+    material.needsUpdate=true;
+  });
+}
+function setSupportIndicatorBlue(on){
+  setSupportIndicatorColor(0x168cff,on?4.8:0);
+}
+
+function animateSupportClampsInward(distance=0.42,duration=720){
+  // The attachment chevrons are mounted on the four clamp groups. Once the
+  // rotating ring stops, move each complete clamp radially toward the aperture.
+  return new Promise(resolve=>{
+    const starts=supportClampGroups.map(group=>group.position.clone());
+    const start=performance.now();
+    function step(now){
+      const p=Math.min((now-start)/duration,1);
+      const eased=p*p*(3-2*p);
+      supportClampGroups.forEach((group,index)=>{
+        const origin=starts[index];
+        const radial=new THREE.Vector3(origin.x,origin.y,0).normalize();
+        group.position.x=origin.x-radial.x*distance*eased;
+        group.position.y=origin.y-radial.y*distance*eased;
+      });
+      if(p<1)requestAnimationFrame(step);
+      else resolve();
+    }
+    requestAnimationFrame(step);
+  });
+}
+function setChevronStateColor(color, intensity){
+  chevrons.forEach(c=>{
+    c.glowMaterial.color.set(color);
+    c.glowMaterial.emissive.set(color);
+    c.glowMaterial.emissiveIntensity=intensity;
+    c.lit.material.color.set(color);
+    c.lit.material.emissive.set(color);
+    c.lit.material.emissiveIntensity=intensity;
+  });
+}
+function animateRingHalfTurn(from,to,duration){
+  return new Promise(resolve=>{
+    const start=performance.now();
+    function step(now){
+      const p=Math.min((now-start)/duration,1);
+      // Smooth mechanical acceleration/deceleration, preserving the exact target.
+      const eased=p*p*(3-2*p);
+      innerRing.rotation.z=from+(to-from)*eased;
+      if(p<1)requestAnimationFrame(step); else resolve();
+    }
+    requestAnimationFrame(step);
+  });
+}
+function waitMs(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+// Cinematic destruction: explosive flash, thick room-filling smoke, scattered
+// gate fragments, collapsed event horizon, with only the robot's lower legs left.
+async function stageStargateDestruction(){
+  if(!arrivingRobot) return;
+  const center=arrivingRobot.position.clone();
+  // Record the original gate hierarchy and world transforms before any mesh is detached.
+  gate.updateWorldMatrix(true,true);
+  destructionSceneSnapshot=[];
+  gate.traverse(obj=>{
+    obj.updateWorldMatrix(true,false);
+    destructionSceneSnapshot.push({
+      object:obj, parent:obj.parent, position:obj.position.clone(),
+      quaternion:obj.quaternion.clone(), scale:obj.scale.clone(), visible:obj.visible,
+      worldPosition:obj.getWorldPosition(new THREE.Vector3()),
+      worldQuaternion:obj.getWorldQuaternion(new THREE.Quaternion()),
+      worldScale:obj.getWorldScale(new THREE.Vector3())
+    });
+  });
+
+  // Keep the complete robot visible through the actual blast onset. Only after
+  // the explosion flash has peaked do we leave the two lower legs on the bridge.
+  arrivingRobot.userData.hologramShown=false;
+
+  // Brief white-hot flash and fiery blast.
+  const flash=new THREE.PointLight(0xff4a12,0,30);
+  flash.position.copy(center); scene.add(flash);
+  const flashStart=performance.now();
+  await new Promise(resolve=>{
+    function flashFrame(now){
+      const t=Math.min((now-flashStart)/850,1);
+      flash.intensity=85*Math.sin(Math.PI*t)*(1-t*.18);
+      if(t<1) requestAnimationFrame(flashFrame); else resolve();
+    }
+    requestAnimationFrame(flashFrame);
+  });
+  flash.intensity=0;
+  // The torso/head/arms disappear at the blast, not before it.
+  // Keep the leg shells pearl-white, with localized soot and a few exposed wires.
+  arrivingRobot.children.forEach(child=>{
+    child.visible = robotParts.legs.includes(child);
+  });
+
+  if(!arrivingRobot.userData.explosionLegDamageAdded){
+    arrivingRobot.userData.explosionLegDamageAdded=true;
+
+    // Explicitly restore the robot's leg armor to white after the blast.
+    // Some scene states/tints can leave the original orange appearance applied.
+    const postBlastWhite=new THREE.MeshStandardMaterial({
+      color:0xf4f5f6, metalness:.12, roughness:.32
+    });
+    robotParts.legs.forEach(leg=>{
+      leg.traverse(part=>{
+        if(!part.isMesh || part.userData.isExplosionDamageDetail) return;
+        if(part.geometry && (
+          part.geometry.type==='CapsuleGeometry' ||
+          part.geometry.type==='SphereGeometry' ||
+          part.geometry.type==='CylinderGeometry'
+        )){
+          part.material=postBlastWhite;
+        }
+      });
+    });
+
+    const sootMat=new THREE.MeshBasicMaterial({
+      color:0x17191c, transparent:true, opacity:.78,
+      depthWrite:false, side:THREE.DoubleSide
+    });
+    const sootSoftMat=new THREE.MeshBasicMaterial({
+      color:0x34383c, transparent:true, opacity:.48,
+      depthWrite:false, side:THREE.DoubleSide
+    });
+    const wireMat=new THREE.MeshStandardMaterial({
+      color:0x17191b, metalness:.55, roughness:.38
+    });
+    const copperMat=new THREE.MeshStandardMaterial({
+      color:0xb56b32, metalness:.62, roughness:.35
+    });
+
+    robotParts.legs.forEach((leg,index)=>{
+      // Uneven, flat soot patches on the front/outer face of the white shin.
+      const sootGroup=new THREE.Group();
+      sootGroup.position.set(index===0 ? -.025 : .025,-.75,.105);
+      sootGroup.rotation.z=index===0 ? -.16 : .13;
+      leg.add(sootGroup);
+
+      const stain1=new THREE.Mesh(new THREE.SphereGeometry(.105,16,12),sootMat);
+      stain1.userData.isExplosionDamageDetail=true;
+      stain1.scale.set(.72,1.65,.13);
+      stain1.position.set(index===0 ? -.035 : .025,.015,.012);
+      sootGroup.add(stain1);
+
+      const stain2=new THREE.Mesh(new THREE.SphereGeometry(.075,14,10),sootSoftMat);
+      stain2.userData.isExplosionDamageDetail=true;
+      stain2.scale.set(1.5,.72,.12);
+      stain2.position.set(index===0 ? .06 : -.045,-.14,.018);
+      sootGroup.add(stain2);
+
+      // Short irregular soot streaks running upward from the damaged shin.
+      for(let k=0;k<3;k++){
+        const streak=new THREE.Mesh(
+          new THREE.CapsuleGeometry(.012+Math.random()*.009,.075+Math.random()*.08,3,7),
+          k===1 ? sootMat : sootSoftMat
+        );
+        streak.userData.isExplosionDamageDetail=true;
+        streak.position.set((Math.random()-.5)*.13,.08+k*.045,.035);
+        streak.rotation.z=(Math.random()-.5)*.48;
+        sootGroup.add(streak);
+      }
+
+      // Two torn electrical leads emerge from the outer side of each lower leg.
+      const outer=index===0 ? -1 : 1;
+      const wirePoints=[
+        new THREE.Vector3(outer*.075,-.47,.06),
+        new THREE.Vector3(outer*.17,-.51,.12),
+        new THREE.Vector3(outer*.22,-.59,.16),
+        new THREE.Vector3(outer*.16,-.65,.10)
+      ];
+      const wireCurve=new THREE.CatmullRomCurve3(wirePoints);
+      const wire=new THREE.Mesh(new THREE.TubeGeometry(wireCurve,16,.012,7,false),wireMat);
+      leg.add(wire);
+
+      const secondWireCurve=new THREE.CatmullRomCurve3([
+        new THREE.Vector3(outer*.06,-.52,.07),
+        new THREE.Vector3(outer*.13,-.57,.15),
+        new THREE.Vector3(outer*.11,-.63,.19)
+      ]);
+      const secondWire=new THREE.Mesh(
+        new THREE.TubeGeometry(secondWireCurve,12,.008,6,false),copperMat
+      );
+      leg.add(secondWire);
+    });
+  }
+
+  // Close/remove the event horizon: its material and mesh are explicitly hidden.
+  if(vortexMaterialRef){
+    vortexMaterialRef.uniforms.uOpacity && (vortexMaterialRef.uniforms.uOpacity.value=0);
+    vortexMaterialRef.dispose();
+    vortexMaterialRef=null;
+  }
+  gate.traverse(obj=>{
+    if(obj.isMesh && (obj.geometry && obj.geometry.type==='CircleGeometry')){
+      obj.visible=false;
+    }
+  });
+
+  // Break the gate, its chevrons AND their mounting/clamp assemblies loose.
+  // Object3D.attach preserves each mesh's world transform while removing it
+  // from its former parent, so no chevron remains visibly suspended in mid-air.
+  const debris=[];
+  const destructibleRoots=[innerRing,chevronGroup,gate,...supportClampGroups];
+  const meshSet=new Set();
+  destructibleRoots.forEach(root=>root.traverse(obj=>{
+    if(obj.isMesh && obj.visible && obj.geometry && obj!==aperture && obj.geometry.type!=='CircleGeometry') meshSet.add(obj);
+  }));
+  meshSet.forEach(obj=>{
+    obj.updateWorldMatrix(true,false);
+    scene.attach(obj);
+    obj.userData.debrisVelocity=new THREE.Vector3(
+      (Math.random()-.5)*7,
+      Math.random()*5+1,
+      (Math.random()-.5)*5
+    );
+    obj.userData.debrisSpin=new THREE.Vector3(
+      (Math.random()-.5)*8,(Math.random()-.5)*8,(Math.random()-.5)*8
+    );
+    obj.userData.debrisSettled=false;
+    debris.push(obj);
+  });
+
+  // Several layers of volumetric-looking smoke billow through the room.
+  const smokeMat=new THREE.MeshBasicMaterial({
+    color:0x292d33,transparent:true,opacity:.78,depthWrite:false
+  });
+  const smoke=[];
+  explosionSmokeObjects=smoke;
+  for(let i=0;i<44;i++){
+    const radius=.55+Math.random()*1.0;
+    const puff=new THREE.Mesh(new THREE.SphereGeometry(radius,14,12),smokeMat.clone());
+    puff.position.set(center.x+(Math.random()-.5)*5,
+      center.y+(Math.random()-.5)*3.2,
+      center.z+(Math.random()-.5)*2.5);
+    puff.scale.set(1.15,.8,1);
+    puff.userData.smokeVelocity=new THREE.Vector3((Math.random()-.5)*.7,
+      .35+Math.random()*1.2,(Math.random()-.5)*.45);
+    puff.userData.smokeLife=4.5+Math.random()*4;
+    puff.userData.smokeStart=performance.now();
+    scene.add(puff); smoke.push(puff);
+  }
+
+  // Continue the physical fall until debris has settled and smoke has expired.
+  // A hard deadline is intentional: on mobile, a fragment can miss the floor
+  // threshold due to geometry/perspective. That must never block the blue button.
+  const animationStart=performance.now();
+  const smokeDurationMax=8500;       // longest generated smoke lifetime
+  const settleGraceMs=1600;           // let the last fragments come to rest
+  const hardDeadlineMs=15000;         // fail-safe for mobile rendering/physics
+  await new Promise(resolve=>{
+    let previous=animationStart;
+    let settledFrames=0;
+    function destructionFrame(now){
+      const dt=Math.min((now-previous)/1000,.05);
+      previous=now;
+      let allSettled=true;
+
+      debris.forEach(piece=>{
+        if(piece.userData.debrisSettled) return;
+        const velocity=piece.userData.debrisVelocity;
+        velocity.y-=9.8*dt;
+        piece.position.addScaledVector(velocity,dt);
+        piece.rotation.x+=piece.userData.debrisSpin.x*dt;
+        piece.rotation.y+=piece.userData.debrisSpin.y*dt;
+        piece.rotation.z+=piece.userData.debrisSpin.z*dt;
+
+        const floorY=-.02;
+        if(piece.position.y<=floorY){
+          piece.position.y=floorY;
+          if(Math.abs(velocity.y)>.75){
+            velocity.y=Math.abs(velocity.y)*.22;
+            velocity.x*=.68;
+            velocity.z*=.68;
+          }else{
+            velocity.set(0,0,0);
+            piece.userData.debrisSettled=true;
+          }
+        }
+        if(!piece.userData.debrisSettled) allSettled=false;
+      });
+
+      smoke.forEach(puff=>{
+        puff.position.addScaledVector(puff.userData.smokeVelocity,dt);
+        puff.scale.multiplyScalar(1+dt*.12);
+        const age=(now-puff.userData.smokeStart)/1000;
+        puff.material.opacity=Math.max(0,.78*(1-age/puff.userData.smokeLife));
+      });
+
+      const elapsed=now-animationStart;
+      if(allSettled) settledFrames++; else settledFrames=0;
+
+      const smokeExpired=elapsed>=smokeDurationMax;
+      const fragmentsRested=settledFrames>=18;
+      const timedOut=elapsed>=hardDeadlineMs;
+
+      if(!timedOut && (!smokeExpired || (!fragmentsRested && elapsed<smokeDurationMax+settleGraceMs))){
+        requestAnimationFrame(destructionFrame);
+        return;
+      }
+
+      // Guarantee a clean, stable post-explosion state before repair is enabled.
+      if(timedOut){
+        debris.forEach(piece=>{
+          piece.userData.debrisVelocity?.set(0,0,0);
+          piece.userData.debrisSpin?.set(0,0,0);
+          piece.userData.debrisSettled=true;
+          if(piece.position.y<-.02) piece.position.y=-.02;
+        });
+      }
+      smoke.forEach(puff=>{
+        puff.material.opacity=0;
+        scene.remove(puff);
+        puff.geometry?.dispose();
+        puff.material?.dispose();
+      });
+      explosionSmokeObjects=[];
+      resolve();
+    }
+    requestAnimationFrame(destructionFrame);
+  });
+  flash.removeFromParent();
+}
+
+async function repairDestroyedScene(){
+  // Blue button readiness is independent from the explosion animation. Never let
+  // a click interrupt falling debris/smoke; repair starts only after both finish.
+  if(!repairReady || !destructionVisualComplete || engageSequenceRunning) return;
+  engageSequenceRunning=true;
+  
+  engageBtn.classList.remove('repair-mode');
+  messageEl.textContent='RÉPARATION EN COURS…';
+  statusEl.textContent='RESTAURATION';
+  statusEl.style.color='#75c8ff';
+
+  // Remove the smoke from the room and dispose its temporary meshes/materials.
+  explosionSmokeObjects.forEach(puff=>{
+    scene.remove(puff);
+    puff.geometry?.dispose();
+    puff.material?.dispose();
+  });
+  explosionSmokeObjects=[];
+
+  // Animate detached debris back to the exact world-space position/orientation
+  // captured before the blast, then put every piece back into its original parent.
+  const detached=destructionSceneSnapshot.filter(item=>item.object.parent===scene && item.object!==gate);
+  const startData=detached.map(item=>({
+    item, position:item.object.getWorldPosition(new THREE.Vector3()),
+    quaternion:item.object.getWorldQuaternion(new THREE.Quaternion()),
+    scale:item.object.getWorldScale(new THREE.Vector3())
+  }));
+  const start=performance.now(), duration=1900;
+  await new Promise(resolve=>{
+    function frame(now){
+      const t=Math.min((now-start)/duration,1);
+      const eased=t*t*(3-2*t);
+      startData.forEach(({item,position,quaternion,scale})=>{
+        const obj=item.object;
+        obj.position.lerpVectors(position,item.worldPosition,eased);
+        obj.quaternion.copy(quaternion).slerp(item.worldQuaternion,eased);
+        obj.scale.lerpVectors(scale,item.worldScale,eased);
+      });
+      if(t<1) requestAnimationFrame(frame); else resolve();
+    }
+    requestAnimationFrame(frame);
+  });
+
+  // Restore original parentage and local transforms, plus visibility of the portal.
+  destructionSceneSnapshot.forEach(item=>{
+    const obj=item.object;
+    if(item.parent && obj.parent!==item.parent) item.parent.add(obj);
+    obj.position.copy(item.position);
+    obj.quaternion.copy(item.quaternion);
+    obj.scale.copy(item.scale);
+    obj.visible=item.visible;
+  });
+  if(vortexMaterialRef && vortexMaterialRef.uniforms.uReveal) vortexMaterialRef.uniforms.uReveal.value=1;
+  if(arrivingRobot){
+    arrivingRobot.removeFromParent();
+    arrivingRobot=null;
+  }
+  robotSelfDestructOnArrival=false;
+  robotSelfDestructTriggered=false;
+  robotWalkActive=false;
+  isOpen=false;
+  destructionComplete=false;
+  destructionVisualComplete=false;
+  repairReady=false;
+  engageBtn.classList.remove('repair-mode');
+  
+  entered.length=0;
+  selectedChevronIndices.length=0;
+  pendingChevronIndex=-1;
+  pendingSymbol='';
+  innerRing.rotation.z=0;
+  setChevronStateColor('#ffe1a0',3.6);
+  setSupportIndicatorBlue(false);
+  engageBtn.setAttribute('aria-label','Activer');
+  engageBtn.title='Activer';
+  statusEl.textContent='SYSTÈME RÉTABLI';
+  statusEl.style.color='#9df0be';
+  messageEl.textContent='La pièce est réparée. La console est prête.';
+  keyButtons.forEach(b=>b.disabled=false);
+  clearBtn.disabled=false;
+  renderConsole();
+  setControlsDisabled(false);
+  engageSequenceRunning=false;
+  clearResetSequence();
+}
+
+async function runEngageSequence(){
+  if(destructionComplete){ await repairDestroyedScene(); return; }
+  if(engageSequenceRunning||isOpen||isDialing||entered.length!==5)return;
+  engageSequenceRunning=true;
+  isDialing=true;
+  setControlsDisabled(true);
+  keyButtons.forEach(b=>b.disabled=true);
+  clearBtn.disabled=true;
+  
+
+  const addressIsCorrect=isTeamCodeValid(entered);
+  const enteredTeam=identifyTeamFromCode(entered);
+  // A recognized team's code used under another team's URL is a valid address,
+  // but activates the robot's delayed self-destruct after it reaches the bridge.
+  robotSelfDestructOnArrival=(
+    CONNECTED_TEAM !== null &&
+    enteredTeam !== null &&
+    enteredTeam !== CONNECTED_TEAM
+  );
+  robotSelfDestructTriggered=false;
+  const initialRotation=innerRing.rotation.z;
+
+  statusEl.textContent='ENGAGEMENT…';
+  statusEl.style.color='#75c8ff';
+  messageEl.textContent='Voyants bleus. Rotation de la roue…';
+  setSupportIndicatorBlue(true);
+
+  // Same mechanical sweep for success and rejection:
+  // 180° counter-clockwise in 2 s, then 180° clockwise in 2 s.
+  await animateRingHalfTurn(initialRotation,initialRotation+Math.PI,2000);
+  await animateRingHalfTurn(initialRotation+Math.PI,initialRotation,2000);
+
+  if(addressIsCorrect){
+    // Keep the display tied to the team selected in the URL.
+    // The entered code identifies the destination/address, not the selected team;
+    // especially, another team's code must not overwrite the wall display.
+    showTeamWallDisplay(CONNECTED_TEAM);
+    // The wheel has now completed both turns. Only now engage the gate's
+    // mounted chevrons/attachment indicators for a valid address.
+    await waitMs(350);
+    // After the rotating wheel has come to a complete stop, the four mounted
+    // chevron clamps physically travel inward toward the inner wheel and light.
+    setChevronStateColor('#66baff',4.2);
+    setSupportIndicatorColor(0x168cff,3.8);
+    await animateSupportClampsInward(0.42,720);
+    statusEl.textContent='ADRESSE VALIDÉE';
+    statusEl.style.color='#9df0be';
+    messageEl.textContent='Les cinq chevrons sont activés. Ouverture de la porte…';
+    await waitMs(650);
+    isOpen=true;
+    activateVortex();
+    // activateVortex opens the horizon over 1 second; its water jet must wait
+    // until the opening is fully revealed, handled by the delayed jet start.
+    keyButtons.forEach(b=>b.disabled=true);
+    clearBtn.disabled=false;
+  }else{
+    statusEl.textContent='ADRESSE REFUSÉE';
+    statusEl.style.color='#ff8e88';
+    messageEl.textContent='Code incorrect. Les voyants des accroches passent en rouge vif…';
+    // Once the ring has completed both turns, the attachment-mounted
+    // chevrons/indicators switch to a saturated luminous red (not pink).
+    setSupportIndicatorColor(0xff0018,2.8);
+    if(arrivingRobot){
+      const redMaterial=new THREE.MeshStandardMaterial({color:0xff1010,emissive:0xff0000,emissiveIntensity:0});
+      const recolor=[];
+      arrivingRobot.traverse(obj=>{if(obj.isMesh && obj.material && obj.material.color) recolor.push(obj);});
+      const redStart=performance.now();
+      // Repair availability uses its own 10-second timer from the explosion onset.
+      // It does not control, cancel, or await the visual destruction animation.
+      destructionComplete=false;
+      destructionVisualComplete=false;
+      repairReady=false;
+      const explosionStartedAt=performance.now();
+      const repairTimer=setTimeout(()=>{
+        repairReady=true;
+        destructionComplete=true; // enables repair-mode click routing, not explosion stop
+        engageBtn.classList.add('repair-mode');
+        engageBtn.setAttribute('aria-label','Réparer la pièce');
+        engageBtn.title='Réparer';
+        
+        messageEl.textContent=destructionVisualComplete
+          ? 'EXPLOSION TERMINÉE — Appuie sur le bouton bleu pour réparer.'
+          : 'RÉPARATION DISPONIBLE — L’explosion continue jusqu’à son terme.';
+        statusEl.textContent='SYSTÈME À RÉINITIALISER';
+        statusEl.style.color='#75c8ff';
+      },10000);
+
+      await new Promise(resolve=>{
+        function redden(now){
+          const t=Math.min((now-redStart)/3000,1);
+          recolor.forEach(obj=>{
+            obj.material.color.lerpColors(new THREE.Color(0xf0f2f4),new THREE.Color(0xff0808),t);
+            if(obj.material.emissive){obj.material.emissive.set(0xff0000);obj.material.emissiveIntensity=1.8*t;}
+          });
+          if(t<1) requestAnimationFrame(redden); else resolve();
+        }
+        requestAnimationFrame(redden);
+      });
+      await stageStargateDestruction();
+      destructionVisualComplete=true;
+      // In case visual destruction finishes after the independent timer, the
+      // timer alone has already made the button blue; do not change its state here.
+      if(repairReady){
+        messageEl.textContent='EXPLOSION TERMINÉE — Appuie sur le bouton bleu pour réparer.';
+      }
+    } else {
+      await waitMs(3000);
+    }
+
+    // Preserve the completed destruction scene and blue repair control.
+    if(!destructionComplete){
+    // All chevrons go dark, then the whole dialing state returns to home.
+    chevrons.forEach(c=>{
+      c.lit.visible=false;
+      c.targetRadius=c.baseRadius;
+      c.glowMaterial.emissiveIntensity=0;
+    });
+    await waitMs(1000);
+    entered.length=0;
+    selectedChevronIndices.length=0;
+    pendingChevronIndex=-1;
+    pendingSymbol='';
+    innerRing.rotation.z=0;
+    setChevronStateColor('#ffe1a0',3.6);
+    setSupportIndicatorBlue(false);
+    statusEl.textContent='CHEVRONS ÉTEINTS';
+    statusEl.style.color='#ff8e88';
+    messageEl.textContent='La console est prête pour une nouvelle séquence.';
+    renderConsole();
+    keyButtons.forEach(b=>b.disabled=false);
+    clearBtn.disabled=false;
+    }
+  }
+
+  isDialing=false;
+  engageSequenceRunning=false;
+  if(!isOpen && !destructionComplete){
+    setControlsDisabled(false);
+  }
+}
+
+function deactivateVortexForReset(){
+  // Close the portal horizon to its initial hidden state when no debris snapshot exists.
+  if(vortexMaterialRef?.uniforms?.uReveal) vortexMaterialRef.uniforms.uReveal.value=0;
+  if(arrivingRobot){ arrivingRobot.removeFromParent(); arrivingRobot=null; }
+  robotWalkActive=false; robotSelfDestructOnArrival=false; robotSelfDestructTriggered=false;
+  destructionComplete=false; destructionVisualComplete=false; repairReady=false;
+}
+engageBtn.addEventListener('click',(event)=>{
+  // Handle the central control in capture phase so decorative/overlay handlers
+  // cannot swallow the confirmation click.
+  event.stopImmediatePropagation();
+  event.preventDefault();
+
+  // Absolute dispatch priority: yellow means RESET. Capture this state BEFORE
+  // clearing timers/classes, otherwise the reset-yellow class disappears first.
+  const resetRequested=resetHasPriority();
+  if(resetRequested){
+    window.location.reload();
+    return;
+  }
+
+  clearResetSequence();
+  runEngageSequence();
+},true);
+renderConsole();
+
+function resize(){
+ renderer.setSize(innerWidth,innerHeight);
+ camera.aspect=innerWidth/innerHeight;
+ // On narrow/portrait displays, keep the complete ring inside the upper canvas area.
+ const portrait=innerHeight>innerWidth;
+ camera.position.z=portrait?22.8:18.8;
+ camera.position.y=portrait?5.15:5.0;
+ camera.lookAt(0,portrait?3.65:3.35,0);
+ camera.updateProjectionMatrix();
+}
+resize();
+addEventListener('resize',resize);
+const chevronClock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(chevronClock.getDelta(),.05);
+ // Smoothly slide each activated chevron inward; return it to its resting
+ // radius when the address is cleared or the symbol is no longer selected.
+ for(const c of chevrons){
+   const ease=1-Math.exp(-dt*7.5);
+   c.currentRadius+=(c.targetRadius-c.currentRadius)*ease;
+   c.group.position.x=Math.cos(c.angle)*c.currentRadius;
+   c.group.position.y=Math.sin(c.angle)*c.currentRadius;
+ }
+ if(vortexMaterialRef) vortexMaterialRef.uniforms.uTime.value+=dt;
+ updateArrivingRobot(performance.now());
+ if(arrivingRobot && arrivingRobot.userData.hologramShown){
+   const ht=performance.now()/1000;
+   const beam=arrivingRobot.userData.hologramBeam;
+   const panel=arrivingRobot.userData.hologramPanel;
+   if(beam){ beam.material.opacity=.23+.09*(.5+.5*Math.sin(ht*2.1)); beam.scale.x=beam.scale.z=1+.06*Math.sin(ht*1.7); }
+   if(panel){ panel.material.opacity=.91+.05*(.5+.5*Math.sin(ht*2.8)); panel.position.y=3.72+.025*Math.sin(ht*1.4); }
+ }
+ if(waterJet){
+   const elapsed=(performance.now()-waterJetStart)/1000;
+   if(elapsed<0){
+     waterJet.visible=false;
+   }else if(elapsed>=2.5){waterJet.visible=false;waterJet=null;}
+   else {
+     waterJet.visible=true;
+     const p=elapsed/2.5;
+     const pulse=Math.sin(Math.PI*p);
+     const swell=Math.sin(Math.PI*Math.min(p*1.18,1));
+     waterJet.scale.set(0.30+1.36*pulse,0.30+1.36*pulse,0.28+2.10*pulse);
+     waterJet.children.forEach((layer,i)=>{
+       if(layer.material.uniforms){
+         layer.material.uniforms.uTime.value=elapsed*5.0+i*1.15;
+         layer.material.uniforms.uOpacity.value=[1.0,.96,.88,.78,.66,.58][i]*(0.82+0.18*Math.max(0,swell))*Math.max(0,pulse);
+       } else {
+         layer.material.opacity=[0.92,.72,.48][i-6]*Math.max(0,pulse);
+       }
+     });
+   }
+ }
+ renderer.render(scene,camera);
+}
+animate();
+</script>
+</body>
+</html>
+
+<style id="v70-real-red-dome">
+/* V70 — retouche strictement limitée au bouton central.
+   Calotte rouge bombée, avec un modelé sphérique lisible et un diamètre de 95 % du socle. */
+.panel #engage{
+  overflow:visible!important;
+  background:
+    radial-gradient(ellipse at 28% 13%,#f4f5f4 0%,#b8c0c2 7%,#687176 19%,#30383c 40%,#171d20 67%,#070a0c 100%)!important;
+  box-shadow:
+    0 2px 0 #050708,
+    0 4px 0 #858b8d,
+    0 7px 0 #202629,
+    0 10px 14px #000e,
+    inset 0 2px 3px #f5f6f488,
+    inset 0 -5px 8px #000c!important;
+}
+.panel #engage::before{
+  inset:-17%!important;
+  border-radius:50%!important;
+  background:
+    linear-gradient(145deg,#e0e4e3 0%,#8a9295 12%,#3b4448 28%,#171d20 49%,#080b0d 60%,#b2b8b9 73%,#555d60 87%,#171b1e 100%)!important;
+  box-shadow:
+    0 2px 0 #050708,
+    0 4px 0 #858b8d,
+    0 7px 0 #171b1e,
+    0 10px 14px #000c!important;
+}
+.panel #engage::after{
+  /* 1.273× l'hôte : diamètre de la calotte = 95 % du socle (1.34×). */
+  content:""!important;
+  inset:-13.65%!important;
+  border:1px solid #a80718!important;
+  border-radius:50%!important;
+  background:
+    /* Reflet de studio allongé sur le sommet de la sphère */
+    radial-gradient(ellipse 18% 8% at 34% 16%,rgba(255,255,248,.98) 0%,rgba(255,238,224,.88) 28%,rgba(255,171,151,.5) 58%,transparent 100%),
+    radial-gradient(ellipse 34% 19% at 31% 21%,rgba(255,154,136,.7) 0%,rgba(255,91,76,.32) 43%,transparent 100%),
+    /* Dégradé de volume : sommet lumineux, flancs et bord inférieur plus profonds */
+    radial-gradient(ellipse 78% 69% at 37% 24%,#ff6b5b 0%,#ff382f 27%,#f51d29 48%,#d90b20 68%,#a90016 84%,#65000c 100%),
+    /* Liseré d'ombre périphérique qui détache la calotte du socle */
+    radial-gradient(ellipse at 50% 50%,transparent 72%,rgba(54,0,8,.48) 88%,rgba(22,0,4,.82) 100%)!important;
+  box-shadow:
+    inset 0 1px 2px rgba(255,246,237,.95),
+    inset 5px 7px 13px rgba(255,122,103,.28),
+    inset -8px -13px 18px rgba(72,0,9,.52),
+    0 2px 0 #850711,
+    0 5px 7px rgba(22,0,4,.8),
+    0 0 13px rgba(255,43,36,.88),
+    0 0 27px rgba(255,29,25,.38)!important;
+  transform:translateZ(0)!important;
+  pointer-events:none;
+}
+.panel #engage:active::after{
+  inset:-13.65%!important;
+  transform:scale(.98)!important;
+}
+</style>
