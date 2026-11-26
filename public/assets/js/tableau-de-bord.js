@@ -1,25 +1,33 @@
 'use strict';
 
-/** Données historiques publiques des quatre équipes, reprises des fichiers JSON fournis. */
-const DONNEES_EQUIPES = [
-  { equipe: 1, annee: 1879, theme: 'Naissance de La Tour de Garde', icone: '◈' },
-  { equipe: 2, annee: 1914, theme: 'Présentation du Photo-Drame de la Création', icone: '◎' },
-  { equipe: 3, annee: 1922, theme: 'Assemblée de Cedar Point et proclamation du Royaume', icone: '⌘' },
-  { equipe: 4, annee: 1931, theme: 'Adoption du nom « Témoins de Jéhovah »', icone: '✧' }
-];
+/**
+ * Lit et valide les données publiques préparées par PHP.
+ *
+ * @returns {object|null} Données publiques du tableau de bord, ou null si elles sont invalides.
+ */
+function lireDonneesTableauDeBord() {
+  const elementDonnees = document.getElementById('donnees-tableau-de-bord');
+  if (!elementDonnees || window.TABLEAU_DE_BORD_ERREUR_CHARGEMENT === true) return null;
 
-/** État provisoire de la partie, conforme au JSON de suivi fourni. */
-const SUIVI_PARTIE = {
-  etat: 'En attente',
-  dureeInitialeSecondes: null,
-  tempsEcouleSecondes: 0,
-  equipes: {
-    1: { nombreTentatives: 0, porteOuverte: false, etatResolution: 'non_resolue' },
-    2: { nombreTentatives: 0, porteOuverte: false, etatResolution: 'non_resolue' },
-    3: { nombreTentatives: 0, porteOuverte: false, etatResolution: 'non_resolue' },
-    4: { nombreTentatives: 0, porteOuverte: false, etatResolution: 'non_resolue' }
+  try {
+    const donnees = JSON.parse(elementDonnees.textContent);
+    if (!donnees || !Array.isArray(donnees.equipes) || donnees.equipes.length !== 4
+      || !donnees.partie || !donnees.partie.chronometrage) return null;
+
+    const numeros = donnees.equipes.map((equipe) => equipe && equipe.equipe);
+    if ([1, 2, 3, 4].some((numero) => !numeros.includes(numero))) return null;
+    return donnees;
+  } catch (erreur) {
+    console.error('Les données publiques du tableau de bord sont invalides.', erreur);
+    return null;
   }
-};
+}
+
+/** Données publiques de la partie chargées depuis le bloc JSON produit par PHP. */
+const DONNEES_TABLEAU_DE_BORD = lireDonneesTableauDeBord();
+
+/** Icônes décoratives fixes, sans donnée historique confidentielle. */
+const ICONES_EQUIPES = { 1: '◈', 2: '◎', 3: '⌘', 4: '✧' };
 
 /** Regroupe les libellés affichés afin de faciliter leur évolution. */
 const TEXTES = {
@@ -31,7 +39,9 @@ const TEXTES = {
   nonResolue: 'NON RÉSOLUE',
   resolue: 'VALIDÉE',
   chronometreAttente: 'CHRONOMETRE EN ATTENTE',
-  chronometreDepasse: 'TEMPS ECOULE'
+  chronometreDepasse: 'TEMPS ECOULE',
+  historiqueMasque: 'DONNÉES HISTORIQUES VERROUILLÉES',
+  erreurDonnees: 'DONNÉES DE SUPERVISION INDISPONIBLES'
 };
 
 /** Alphabet 5x7 utilisé par l'afficheur matriciel, indépendant des polices installées. */
@@ -58,47 +68,86 @@ const GLYPHES_LED = {
   '/':['00001','00010','00010','00100','01000','01000','10000'], '.':['00000','00000','00000','00000','00000','00110','00110']
 };
 
-/** Construit le module visuel d'une équipe à partir de ses données publiques et de son suivi.
- * @param {{equipe:number,annee:number,theme:string,icone:string}} equipe Données historiques de l'équipe.
+/**
+ * Échappe une valeur dynamique avant son insertion dans un fragment HTML.
+ *
+ * @param {string|number} valeur Valeur à afficher.
+ * @returns {string} Valeur encodée pour un contexte de texte HTML.
+ */
+function echapperHtml(valeur) {
+  return String(valeur).replace(/[&<>"']/g, (caractere) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+  })[caractere]);
+}
+
+/** Construit le module visuel d'une équipe à partir des données publiques fournies par PHP.
+ * @param {object} equipe Données publiques d'une équipe.
  * @returns {string} Fragment HTML du module de supervision.
  */
 function creerInterfaceEquipe(equipe) {
-  const suivi = SUIVI_PARTIE.equipes[equipe.equipe];
-  const numero = String(equipe.equipe).padStart(2, '0');
-  const porte = suivi.porteOuverte ? TEXTES.porteOuverte : TEXTES.porteFermee;
-  const resolution = suivi.etatResolution === 'resolue' ? TEXTES.resolue : TEXTES.nonResolue;
-  const porteIcone = suivi.porteOuverte ? '▣' : '▤';
-  return `<article class="team-module" data-team="${equipe.equipe}" aria-label="${TEXTES.equipe} ${equipe.equipe}">
+  const numeroEquipe = Number(equipe.equipe);
+  const numero = String(numeroEquipe).padStart(2, '0');
+  const porteOuverte = equipe.porte_ouverte === true;
+  const porte = porteOuverte ? TEXTES.porteOuverte : TEXTES.porteFermee;
+  const resolue = equipe.etat_resolution_annee === 'resolue';
+  const resolution = resolue ? TEXTES.resolue : TEXTES.nonResolue;
+  const porteIcone = porteOuverte ? '▣' : '▤';
+  const tentatives = Math.max(0, Number(equipe.nombre_tentatives_porte) || 0);
+  const phraseVisible = resolue && typeof equipe.phrase === 'string' && equipe.phrase.trim() !== '';
+  const anneeVisible = resolue && equipe.annee !== null && equipe.annee !== undefined
+    && Number.isInteger(Number(equipe.annee));
+  const historique = phraseVisible
+    ? `<div class="team-name">${echapperHtml(equipe.phrase)}</div>`
+    : `<div class="team-name team-history-locked">${TEXTES.historiqueMasque}</div>`;
+  const annee = anneeVisible
+    ? `<div class="team-year">${echapperHtml(Number(equipe.annee))}</div>`
+    : '';
+
+  return `<article class="team-module" data-team="${numeroEquipe}" aria-label="${TEXTES.equipe} ${numero}">
     <div class="edge"></div><span class="corner tl"></span><span class="corner br"></span><div class="scanline"></div>
     <div class="module-inner">
-      <div class="team-identity"><div class="team-kicker">${TEXTES.equipe} // UNITÉ ${numero}</div><div class="team-number" data-number="${numero}">${numero}</div><div><div class="team-name">${equipe.theme}</div><div class="team-year">${equipe.annee}</div></div></div>
+      <div class="team-identity"><div class="team-kicker">${TEXTES.equipe} // UNITÉ ${numero}</div><div class="team-number" data-number="${numero}">${numero}</div><div class="team-history">${historique}${annee}</div></div>
       <div class="core-display">
-        <svg viewBox="0 0 200 200" role="img" aria-label="Instrument de supervision ${equipe.equipe}">
-          <defs><radialGradient id="noyau${equipe.equipe}"><stop offset="0" stop-color="var(--accent)" stop-opacity=".42"/><stop offset=".55" stop-color="var(--accent2)" stop-opacity=".12"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></radialGradient></defs>
-          <circle cx="100" cy="100" r="91" fill="url(#noyau${equipe.equipe})" class="pulse"/>
+        <svg viewBox="0 0 200 200" role="img" aria-label="Instrument de supervision ${numero}">
+          <defs><radialGradient id="noyau${numeroEquipe}"><stop offset="0" stop-color="var(--accent)" stop-opacity=".42"/><stop offset=".55" stop-color="var(--accent2)" stop-opacity=".12"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></radialGradient></defs>
+          <circle cx="100" cy="100" r="91" fill="url(#noyau${numeroEquipe})" class="pulse"/>
           <g class="ring-rotate" fill="none" stroke="var(--accent)" stroke-width="1.2"><circle cx="100" cy="100" r="79" stroke-dasharray="3 5"/><path d="M100 8V25 M100 175V192 M8 100H25 M175 100H192"/><path d="M35 35L47 47 M153 153L165 165 M165 35L153 47 M47 153L35 165" stroke-width="3"/></g>
           <g class="ring-reverse" fill="none" stroke="var(--accent2)" stroke-width="2"><circle cx="100" cy="100" r="62" stroke-dasharray="52 12 8 12"/><circle cx="100" cy="100" r="49" stroke-dasharray="2 7"/></g>
           <circle cx="100" cy="100" r="36" fill="#07172a" stroke="var(--accent)" stroke-width="1.5"/><circle cx="100" cy="100" r="29" fill="none" stroke="var(--accent2)" stroke-width="1" opacity=".8"/>
-          <text x="100" y="110" text-anchor="middle" fill="var(--accent)" font-size="31" font-family="Arial">${equipe.icone}</text>
+          <text x="100" y="110" text-anchor="middle" fill="var(--accent)" font-size="31" font-family="Arial">${ICONES_EQUIPES[numeroEquipe]}</text>
           <path d="M100 0V17 M100 183V200 M0 100H17 M183 100H200" stroke="var(--accent)" stroke-width="2" opacity=".8"/>
         </svg>
         <div class="core-caption">SCAN // SECTEUR ${numero}</div>
       </div>
       <div class="team-metrics">
         <div class="metric"><div class="metric-label">État du sas</div><div class="metric-value state status-line"><span class="status-dot"></span>${porteIcone} ${porte}</div></div>
-        <div class="metric"><div class="metric-label">${TEXTES.tentatives}</div><div class="metric-value">${String(suivi.nombreTentatives).padStart(2, '0')}</div><div class="signal-bars"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="metric"><div class="metric-label">${TEXTES.tentatives}</div><div class="metric-value">${String(tentatives).padStart(2, '0')}</div><div class="signal-bars"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
         <div class="metric"><div class="metric-label">${TEXTES.resolution}</div><div class="metric-value state">${resolution}</div></div>
       </div>
     </div>
   </article>`;
 }
 
-/** Injecte les quatre modules d'équipe dans la grille principale.
+/** Injecte les quatre modules d'équipe à partir des données PHP validées.
  * @returns {void}
  */
 function initialiserTableauDeBord() {
   const conteneur = document.getElementById('equipes');
-  conteneur.innerHTML = DONNEES_EQUIPES.map(creerInterfaceEquipe).join('');
+  if (!conteneur) return;
+
+  if (!DONNEES_TABLEAU_DE_BORD) {
+    conteneur.textContent = TEXTES.erreurDonnees;
+    conteneur.classList.add('team-grid-error');
+    actualiserHorloge();
+    actualiserBandeauLed();
+    dernierInstantHorloge = performance.now();
+    window.requestAnimationFrame(boucleAffichage);
+    return;
+  }
+
+  const equipesTriees = [...DONNEES_TABLEAU_DE_BORD.equipes]
+    .sort((a, b) => Number(a.equipe) - Number(b.equipe));
+  conteneur.innerHTML = equipesTriees.map(creerInterfaceEquipe).join('');
   actualiserHorloge();
   actualiserBandeauLed();
   window.addEventListener('resize', actualiserBandeauLed);
@@ -294,20 +343,25 @@ function dessinerMatriceLed(message) {
   contexte.shadowBlur = 0;
 }
 
-/** Calcule puis affiche le chronomètre LED sans inventer de durée initiale.
+/** Affiche le chronométrage public transmis par PHP sur le bandeau LED.
  * @returns {void}
  */
 function actualiserBandeauLed() {
-  const duree = SUIVI_PARTIE.dureeInitialeSecondes;
-  if (duree === null || !Number.isFinite(duree)) {
+  const chronometrage = DONNEES_TABLEAU_DE_BORD?.partie?.chronometrage;
+  const restant = chronometrage?.temps_restant_secondes;
+
+  if (restant === null || restant === undefined || !Number.isFinite(Number(restant))) {
     dessinerMatriceLed(TEXTES.chronometreAttente);
     return;
   }
-  const restant = Math.max(0, duree - SUIVI_PARTIE.tempsEcouleSecondes);
-  const heures = String(Math.floor(restant / 3600)).padStart(2, '0');
-  const minutes = String(Math.floor((restant % 3600) / 60)).padStart(2, '0');
-  const secondes = String(restant % 60).padStart(2, '0');
-  dessinerMatriceLed(restant === 0 ? TEXTES.chronometreDepasse : `${heures}:${minutes}:${secondes}`);
+
+  const secondesRestantes = Math.max(0, Math.floor(Number(restant)));
+  const heures = String(Math.floor(secondesRestantes / 3600)).padStart(2, '0');
+  const minutes = String(Math.floor((secondesRestantes % 3600) / 60)).padStart(2, '0');
+  const secondes = String(secondesRestantes % 60).padStart(2, '0');
+  dessinerMatriceLed(secondesRestantes === 0
+    ? TEXTES.chronometreDepasse
+    : `${heures}:${minutes}:${secondes}`);
 }
 
 /** Initialise un décor Three.js discret composé de particules et de lignes lumineuses.
