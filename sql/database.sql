@@ -1,7 +1,8 @@
 
+
 -- ============================================================
 -- JEUX ASSEMBLÉES 2026
--- Structure de la base de données
+-- Structure complète de la base de données
 -- Référence de conception validée
 -- ============================================================
 
@@ -215,11 +216,16 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- ============================================================
 -- 6. TABLE : journal
 -- Historique des événements du jeu et remontées techniques
+-- Les événements peuvent être indépendants d'une partie
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS journal (
     id CHAR(36) NOT NULL,
-    partie_id CHAR(36) NOT NULL,
+
+    -- NULL autorisé pour les événements techniques indépendants
+    -- d'une partie (exemple : test de connexion à la base).
+    partie_id CHAR(36) NULL,
+
     equipe_id CHAR(36) NULL,
     groupe_id CHAR(36) NULL,
 
@@ -250,7 +256,9 @@ CREATE TABLE IF NOT EXISTS journal (
         'erreur_acces',
         'acces_refuse',
         'ressource_introuvable',
-        'operation_interrompue'
+        'operation_interrompue',
+
+        'test'
     ) NOT NULL,
 
     niveau ENUM(
@@ -296,4 +304,3 @@ CREATE TABLE IF NOT EXISTS journal (
 -- ============================================================
 -- FIN DU SCRIPT
 -- ============================================================
-
