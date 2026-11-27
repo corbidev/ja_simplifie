@@ -7,23 +7,33 @@ use EscapeGame\Api\AuthentificationApi;
 use EscapeGame\Api\ReponseJson;
 use EscapeGame\Service\SupervisionService;
 
-require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Authentification.php';
+$racineProjet = dirname(__DIR__, 2);
+
+// Les contrôles de session doivent précéder bootstrap.php, qui ouvre la connexion PDO.
+require_once $racineProjet . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Authentification.php';
+require_once $racineProjet . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Api' . DIRECTORY_SEPARATOR . 'ApiException.php';
+require_once $racineProjet . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Api' . DIRECTORY_SEPARATOR . 'AuthentificationApi.php';
+require_once $racineProjet . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Api' . DIRECTORY_SEPARATOR . 'ReponseJson.php';
+
 try {
     $identite = AuthentificationApi::obtenirIdentite();
-    $connexion = require dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'bootstrap.php';
-    $service = new SupervisionService($connexion);
     $methode = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
     if ($methode === 'GET') {
         AuthentificationApi::exigerRole($identite, ['administrateur', 'tableau_de_bord', 'equipe']);
+
         $action = $_GET['action'] ?? 'etat';
         if ($action !== 'etat') {
             throw new ApiException('Cette action de consultation est inconnue.', 404);
         }
+
         $partieId = $_GET['partie_id'] ?? null;
         if (!is_string($partieId) || !preg_match('/\A[0-9a-fA-F-]{36}\z/', $partieId)) {
             throw new ApiException('Un identifiant de partie valide est requis.');
         }
+
+        $connexion = require $racineProjet . DIRECTORY_SEPARATOR . 'bootstrap.php';
+        $service = new SupervisionService($connexion);
         $numeroEquipe = $identite['role'] === 'equipe' ? $identite['equipe'] : null;
         $etat = $service->obtenirEtat($partieId, $numeroEquipe, $identite['role'] === 'administrateur');
         ReponseJson::envoyer(['succes' => true, 'donnees' => $etat]);
@@ -41,11 +51,13 @@ try {
     if ($contenu === false || $contenu === '') {
         throw new ApiException('Le corps JSON de la requête est obligatoire.');
     }
+
     try {
         $requete = json_decode($contenu, true, 512, JSON_THROW_ON_ERROR);
     } catch (JsonException $exception) {
         throw new ApiException('Le corps de la requête doit être un JSON valide.', 400, $exception);
     }
+
     if (!is_array($requete)) {
         throw new ApiException('La structure du corps JSON est invalide.');
     }
@@ -55,6 +67,11 @@ try {
     if (!is_string($partieId) || !preg_match('/\A[0-9a-fA-F-]{36}\z/', $partieId)) {
         throw new ApiException('Un identifiant de partie valide est requis.');
     }
+
+    // Le chargement du bootstrap active l'autoloader et ouvre PDO seulement
+    // après validation de la session, du rôle, du CSRF et du corps de requête.
+    $connexion = require $racineProjet . DIRECTORY_SEPARATOR . 'bootstrap.php';
+    $service = new SupervisionService($connexion);
 
     switch ($action) {
         case 'partie.modifier_etat':
